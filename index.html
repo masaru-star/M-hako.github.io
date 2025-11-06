@@ -2,21 +2,29 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>まさる式箱庭ゲーム Ver.4.1.0</title>
+  <title>MSR式箱庭ゲーム　Ver.4.6</title>
   <style>
     body { font-family: sans-serif; }
     table { border-collapse: collapse; }
   td {
-    width: 22px;
-    height: 22px;
+    width: 23px;
+    height: 23px;
     border: 1px solid #aaa;
     text-align: center;
     cursor: pointer;
   }
   .selected {
-    outline: 2px solid gray;
+    outline: 4px solid gray;
     outline-offset: -1px;
   }
+.action-link {
+    cursor: pointer;
+    color: blue;
+    text-decoration: underline;
+}
+.next-action {
+    color: #012073 !important;
+}
     .sea { background-color: #aaf; }
     .plain { background-color: #efe; }
     .waste { background-color: #ddd; }
@@ -26,26 +34,23 @@
     .factory { background-color: #efe; }
     .gun { background-color: #4a9; }
     .port { background-color: #aaf; }
-    .defenseFacility { background-color: #f9d; } /* 防衛施設の色を追加 */
-    .enhancedFarm { background-color: #efe; } /* 強化農場も同じ色 */
-    .enhancedFactory { background-color: #efe; } /* 強化工場も同じ色 */
+    .defenseFacility { background-color: #f9d; }
+    .enhancedFarm { background-color: #efe; }
+    .enhancedFactory { background-color: #efe; }
     .Monument { background-color: #efe; }
     .warship { background-color: #aaf; }
-    .warship-dispatched { background-color: #aaf; color: #fff;} /* 派遣中の軍艦 */
-    .warship-wreckage { background-color: #aaf; color: #fff; } /* 軍艦の残骸の色 */
-
+    .warship-dispatched { background-color: #aaf; color: #fff;}
+    .warship-wreckage { background-color: #aaf; color: #fff; }
+    .oilRig { background-color: #aaf; }
   .selected {
     border: 2px solid gray !important;
   }
-  /* 新しいスタイルを追加 */
   .log-red {
     color: red;
   }
   .log-cyan {
     color: blue;
   }
-
-  /* 軍艦建造入力フォームのスタイル */
   #warshipBuildInputs {
       display: none;
       margin-top: 1em;
@@ -93,8 +98,19 @@
   </p>
 </div>
 
-<p>砲撃可能数上限: <span id="gunCount">0</span>回 </br>資金: <span id="money">1000</span>G | 食料: <span id="food">500</span> | 人口: <span id="population">0</span>人 | ターン: <span id="turn">0</span> | 島の名前: <span id="currentIslandName"></span></p>
-
+<details>
+  <summary>Ver.4.6リリースノート</summary><p>
+    <div style="margin-top: 1em; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
+重要！　更新以前からプレイしていた人は一度手動でセーブ、ロードしてください！</br>
+・計画キューの可視化、撤回を可能にする</br>
+・農場/工場建設と設備強化を同時に行うときに失敗しなくなる</br>
+・整地と防衛施設建設を同時に行うときに失敗しなくなる</br>
+・計画キューに最大20件保存可能になる(実行数は変わらず)</br>
+・海を掘削すると低確率で油田が発掘され、収入が増える</br>
+・「オプションを先頭に戻さない」チェックボックスの追加</br>
+    </div>
+</p></details>
+<p>砲撃可能数上限: <span id="gunCount">0</span>回 | 実績Pt: <span id="achievementPoints">0</span>Pt</br>資金: <span id="money">1000</span>G | 食料: <span id="food">500</span> | 人口: <span id="population">0</span>人 | ターン: <span id="turn">0</span> | 島の名前: <span id="currentIslandName"></span></p>
 <div>
     <label for="otherIslandActionInput">他島の行動:</label>
     <input type="text" id="otherIslandActionInput" style="width: 400px; margin-bottom: 5px;" placeholder="ここに他島からの行動を入力してください">
@@ -102,6 +118,10 @@
 <div>
     <label for="actionForOtherIslandOutput">他島への行動:</label>
     <input type="text" id="actionForOtherIslandOutput" style="width: 400px; margin-bottom: 5px;" readonly>
+</div>
+<div style="margin-top: 2px;">
+    <input type="checkbox" id="keepOptionSelected">
+    <label for="keepOptionSelected">オプションを先頭に戻さない</label>
 </div>
 <button onclick="nextTurn()">▶ ターンを進める</button>
 <br>
@@ -125,6 +145,7 @@
   <option value="selfDestructMilitaryFacility" data-myisland="true">軍事施設自爆 (無料)</option>
   <option value="goToOtherIsland" data-myisland="true">他の島に行く</option>
   <option value="returnToMyIsland" data-anyisland="true">自島に戻る</option>
+  <option value="delayAction" data-myisland="true">遅延行動</option>
   <option value="buildWarship" data-myisland="true">軍艦建造</option>
   <option value="refuelWarship" data-myisland="true">燃料補給</option>
   <option value="resupplyWarshipAmmo" data-myisland="true">弾薬補給</option>
@@ -179,13 +200,15 @@
         <input type="number" id="warshipAccuracy" min="0" max="2" value="0"> (0～2, 1あたり50,000,000G)
     </div>
 </div>
-
 <button onclick="confirmAction()" id="confirmBtn" disabled>決定</button>
 <span id="tileInfo"></span>
-
-<table id="map"></table>
+<div id="gameContainer" style="display: flex; gap: 5px;">
+    <table id="map"></table>
+    <div id="actionQueueDisplay" style="font-size: 0.7em;margin-top: 1em; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
+      <h4>計画キュー</h4><ul id="actionQueueList" style="list-style-type: none; padding: 0;"></ul>設定した計画はクリックで撤回可能です。
+    </div>
+</div>
 <div id="log" style="margin-top:1em;"></div>
-
 <script>
   let monster = null;
   const SIZE = 16;
@@ -193,6 +216,10 @@
   let food = 1000;
   let population = 0;
   let turn = 0;
+  let achievementPoints = 0;
+  let tutorialMissions = {
+      '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false
+  };
   let map = [];
   let selectedX = null, selectedY = null;
   let actionQueue = [];
@@ -207,6 +234,157 @@
       maxFuel: 1000,
       maxAmmo: 1200
   };
+/**
+ * 軍艦がダメージを受けた際に、火災または弾薬庫の発火を判定する
+ * @param {object} warship ダメージを受けた軍艦オブジェクト
+ * @param {number} damage 実際に受けたダメージ量 (今回は使用しないが汎用性のために残す)
+ */
+function checkAbnormalityOnDamage(warship, damage) {
+    // 既に異常状態か、沈没している場合はスキップ
+    if (warship.currentDurability <= 0 || warship.abnormality !== null) {
+        return; 
+    }
+    let newAbnormality = null;
+    if (warship.currentAmmo >= 1000 && Math.random() < 0.30) {
+        newAbnormality = 'ammoFire'; 
+    }
+    if (newAbnormality === null && Math.random() < 0.10) {
+        newAbnormality = 'fire';
+    }
+        if (newAbnormality !== null) {
+        warship.abnormality = newAbnormality;
+        if (newAbnormality === 'fire') {
+            logAction(`軍艦 ${warship.name} に火災が発生しました！`);
+        } else if (newAbnormality === 'ammoFire') {
+            logAction(`軍艦 ${warship.name} の弾薬庫が発火しました！`);
+        }
+    }
+}
+
+
+/**
+ * 砲撃が命中した際に、通信障害または浸水を判定する
+ * @param {object} target 命中した軍艦オブジェクト
+ */
+function checkAbnormalityOnHit(target) {
+    if (target.currentDurability <= 0 || target.abnormality !== null) {
+        return;
+    }
+    
+    let newAbnormality = null;
+    if (target.currentDurability <= 50 && Math.random() < 0.05) {
+        newAbnormality = 'flooding';
+    }
+
+    // 1. 通信障害の判定 (命中した際、1%の確率)
+    // 自島にいる場合は発生しない (isDispatchedがtrueの時のみ発生)
+    if (newAbnormality === null && target.isDispatched && Math.random() < 0.01) {
+        newAbnormality = 'commFailure'; 
+    }
+
+    if (newAbnormality !== null) {
+        target.abnormality = newAbnormality;
+        if (newAbnormality === 'flooding') {
+            logAction(`軍艦 ${target.name} に浸水が発生しました！`);
+        } else if (newAbnormality === 'commFailure') {
+            logAction(`軍艦 ${target.name} に通信障害が発生しました！`);
+        }
+    }
+}
+function getActionName(action, x, y, extraData) {
+    let name = '';
+    const actionNames = {
+        buildFarm: '農場建設', buildFactory: '工場建設', enhanceFacility: '設備強化', buildPort: '港建設',
+        buildGun: '砲台建設', buildDefenseFacility: '防衛施設建設', flatten: '整地', landfill: '埋め立て',
+        dig: '掘削', cutForest: '伐採', plantForest: '植林', exportFood: '食料輸出',
+        bombard: '砲撃', spreadBombard: '拡散弾砲撃', ppBombard: 'PP弾砲撃', selfDestructMilitaryFacility: '軍事施設自爆',
+        goToOtherIsland: '他の島に行く', returnToMyIsland: '自島に戻る', buildWarship: '軍艦建造',
+        refuelWarship: '燃料補給', resupplyWarshipAmmo: '弾薬補給', repairWarship: '軍艦修理',
+        enhanceWarship: '軍艦増強', decommissionWarship: '軍艦除籍', dispatchWarship: '軍艦派遣',
+        requestWarshipReturn: '軍艦帰還要請', buildMonument: '石碑建設', upgradeMonument: '石碑強化',
+        sellMonument: '石碑売却', initializeIsland: '島の初期化', delayAction: '遅延行動' 
+    };
+    name = actionNames[action] || action;
+
+    // 計画の詳細情報を名前に組み込む
+    if (action === 'exportFood' && extraData && extraData.amount) {
+        name += ` (${extraData.amount * 20} 食料)`;
+    } else if ((action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') && extraData && extraData.count) {
+        name += ` (${extraData.count} 発)`;
+    } else if (action === 'refuelWarship' && extraData && extraData.amount) {
+        name += ` (${extraData.amount} 燃料)`;
+    } else if (action === 'resupplyWarshipAmmo' && extraData && extraData.amount) {
+        name += ` (${extraData.amount} 弾薬)`;
+    } else if (action === 'repairWarship' && extraData && extraData.amount) {
+        name += ` (${extraData.amount} 耐久回復)`;
+    } else if (action === 'buildWarship' && extraData && extraData.name) {
+        name += ` (${extraData.name})`;
+    } else if ((action === 'dispatchWarship' || action === 'requestWarshipReturn') && extraData && extraData.name) {
+        name += ` (${extraData.name})`;
+    } else if (action === 'goToOtherIsland' && extraData && extraData.code) {
+        name += ` (コード: ${extraData.code.substring(0, 10)}...)`;
+    }
+    
+    // 座標の表示
+    let coord = (x !== null && y !== null) ? `(${x},${y})` : '';
+
+    return { name, coord };
+}
+
+// 計画キューの表示を更新する関数
+function renderActionQueue() {
+    const list = document.getElementById('actionQueueList');
+    if (!list) return;
+    list.innerHTML = '';
+    const MAX_QUEUE_SIZE = 20; 
+    for (let index = 0; index < MAX_QUEUE_SIZE; index++) {
+        const listItem = document.createElement('li');
+        const task = actionQueue[index]; // キューから計画を取得
+        // 2桁の番号を先頭に追加
+        const displayIndex = (index + 1).toString().padStart(2, '0');
+        if (task) {
+            // 計画が設定されている場合
+            const { name, coord } = getActionName(task.action, task.x, task.y, task);
+            let classList = "action-link";
+            if (index < 2) {
+                classList += " next-action";
+            }
+            listItem.innerHTML = `
+                ${displayIndex} 
+                <span class="${classList}" onclick="cancelAction(${index})">
+                    ${coord} ${name}
+                </span>
+            `;
+        } else {
+            listItem.innerHTML = `${displayIndex} 計画無し`;
+        }       
+        list.appendChild(listItem);
+    }
+}
+// 計画を撤回する関数
+window.cancelAction = function (index) {
+    if (index >= 0 && index < actionQueue.length) {
+        const actionToCancel = actionQueue[index];
+        const { name, coord } = getActionName(actionToCancel.action, actionToCancel.x, actionToCancel.y, actionToCancel);
+        actionQueue.splice(index, 1);
+        logAction(`計画「${coord} ${name}」を撤回しました。`);
+        renderActionQueue();
+        saveMyIslandState(); // 島の状態を保存
+    }
+}
+function checkAndCompleteMission(missionId, pt, foodReward, moneyReward, checkFunc, logMessage) {
+    if (!tutorialMissions[missionId] && checkFunc()) {
+        tutorialMissions[missionId] = true;
+        achievementPoints += pt;
+        food += foodReward;
+        money += moneyReward;
+        logAction(`チュートリアルミッション${missionId}「${logMessage}」を達成し、${pt}Pt、${moneyReward}G、${foodReward}食料を獲得しました！`);
+        updateStatus();
+        saveMyIslandState();
+        return true;
+    }
+    return false;
+}
   // 上限到達数に応じて軍艦名のクラスを返す関数
   function getWarshipCapClass(ship) {
       let cappedCount = 0;
@@ -294,7 +472,8 @@ function initMap() {
     population += 25;
     placed++;
   }
-  document.getElementById('islandNameInput').value = islandName; // UIに初期値を反映
+document.getElementById('islandNameInput').value = islandName; // UIに初期値を反映
+    renderActionQueue();
 }
 
 function updateStatus() {
@@ -303,6 +482,7 @@ function updateStatus() {
   document.getElementById('population').textContent = population < 0 ? 0 : population;
   document.getElementById('turn').textContent = turn;
   document.getElementById('currentIslandName').textContent = islandName;
+  document.getElementById('achievementPoints').textContent = achievementPoints; // ここで値を反映
   const guns = getGunCount();
   document.getElementById('gunCount').textContent = guns;
   // 他の島を見ているときは資金、食料、人口を非表示にする
@@ -394,8 +574,8 @@ function renderMap() {
       if (tile.enhanced) {
           if (tile.facility === 'farm') cell.classList.add('enhancedFarm');
           if (tile.facility === 'factory') cell.classList.add('enhancedFactory');
+          if (tile.facility === 'oilRig') cell.classList.add('enhancedOilRig');
       }
-
       // 軍艦の表示
       const warshipAtTile = warships.find(ship => ship.x === x && ship.y === y);
       if (warshipAtTile && !isViewingOtherIsland) { // 自分の島を見ているときのみ軍艦を表示
@@ -418,7 +598,8 @@ function renderMap() {
                              displayFacility === 'gun' ? '🔫' :
                              displayFacility === 'port' ? '⚓' :
                              displayFacility === 'Monument' ? '🗿' :
-                             displayFacility === 'defenseFacility' ? '🛡️' : '';
+                             displayFacility === 'defenseFacility' ? '🛡️' :
+                             displayFacility === 'oilRig' ? '🛢️' :'';
       }
 
 
@@ -426,6 +607,7 @@ function renderMap() {
       if (tile.enhanced) {
           if (tile.facility === 'farm') cell.textContent = '🌾';
           if (tile.facility === 'factory') cell.textContent = '🏭';
+          if (tile.facility === 'oilRig') cell.textContent = '🛢️';
       }
 
       if (selectedX === x && selectedY === y) cell.classList.add('selected');
@@ -451,7 +633,8 @@ function showTileInfo(x, y) {
         gun: '砲台',
         port: '港',
         defenseFacility: '防衛施設',
-        Monument: '石碑'
+        Monument: '石碑',
+        oilRig: '海底油田'
     };
 
 
@@ -460,6 +643,7 @@ function showTileInfo(x, y) {
     if (tile.enhanced) { // 強化施設の表示名
         if (tile.facility === 'farm') facilityName = '強化農場';
         if (tile.facility === 'factory') facilityName = '強化工場';
+        if (tile.facility === 'oilRig') facilityName = '高効率海底油田';
     }
     info += ` / 建物: ${facilityName}`;
     if (tile.facility === 'house' && !isViewingOtherIsland) info += ` (人口: ${tile.pop})`; // 他の島では人口表示なし
@@ -497,7 +681,7 @@ function logAction(msg) {
   const log = document.getElementById('log');
   const entry = document.createElement('div');
   entry.textContent = `[ターン${turn}] ${msg}`;
-  if (msg.includes('失敗') || msg.includes('台風') || msg.includes('隕石') || msg.includes('不足') || msg.includes('廃墟') || msg.includes('壊滅') || msg.includes('踏み荒らしました') || msg.includes('怪獣が出現') || msg.includes('自爆') || msg.includes('攻撃されました') || msg.includes('砲撃') || msg.includes('破壊されました') || msg.includes('撃沈')) {
+  if (msg.includes('失敗') || msg.includes('台風') || msg.includes('隕石') || msg.includes('不足') || msg.includes('廃墟') || msg.includes('壊滅') || msg.includes('踏み荒らしました') || msg.includes('怪獣が出現') || msg.includes('自爆') || msg.includes('攻撃されました') || msg.includes('砲撃') || msg.includes('破壊されました') || msg.includes('撃沈')|| msg.includes('枯渇')) {
     entry.classList.add('log-red');
   } else if (msg.includes('建設') || msg.includes('形成') || msg.includes('討伐') || msg.includes('初期化') || msg.includes('強化') || msg.includes('補給') || msg.includes('移動しました') || msg.includes('派遣') || msg.includes('帰還') || msg.includes('要請') || msg.includes('修理')) { // 修理を追加
     entry.classList.add('log-cyan');
@@ -545,7 +729,8 @@ function encodeWarshipData(warship) {
         reconnaissance: warship.reconnaissance,
         accuracyImprovement: warship.accuracyImprovement,
         isDispatched: warship.isDispatched,
-        originalCost: warship.originalCost || 0 // 追加
+        originalCost: warship.originalCost || 0, // 追加
+        abnormality: warship.abnormality || 0
     };
     const jsonString = JSON.stringify(data);
     return btoa(encodeURIComponent(jsonString));
@@ -564,13 +749,15 @@ function decodeWarshipData(encodedData) {
 
 
 // 自分の島の状態を保存
-function saveGame() { // 関数名をsaveGameに変更
+function saveGame() {
     const gameState = {
-        map: JSON.parse(JSON.stringify(map)), // ディープコピー
+        map: JSON.parse(JSON.stringify(map)),
         money: money,
         food: food,
         population: population,
         turn: turn,
+        achievementPoints: achievementPoints,
+        tutorialMissions: tutorialMissions,
         islandName: islandName,
         monster: monster ? JSON.parse(JSON.stringify(monster)) : null,
         actionQueue: JSON.parse(JSON.stringify(actionQueue)),
@@ -582,8 +769,7 @@ function saveGame() { // 関数名をsaveGameに変更
     logAction("ゲームがセーブされました。データをテキストエリアからコピーしてください。");
 }
 
-// ゲームをロードする関数
-function loadGame() { // 関数名をloadGameに変更
+function loadGame() {
     const encodedData = document.getElementById('saveLoadData').value;
     if (!encodedData) {
         logAction("ロードするセーブデータがありません。");
@@ -599,6 +785,10 @@ function loadGame() { // 関数名をloadGameに変更
         food = gameState.food;
         population = gameState.population;
         turn = gameState.turn;
+        achievementPoints = gameState.achievementPoints || 0;
+        tutorialMissions = gameState.tutorialMissions || { 
+            '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false
+        };
         islandName = gameState.islandName || "MyIsland";
         monster = gameState.monster;
         actionQueue = gameState.actionQueue || []; // ロード時にactionQueueがない場合に対応
@@ -627,6 +817,9 @@ function loadGame() { // 関数名をloadGameに変更
             if (ship.originalCost === undefined) { // 新規データ対応
                 ship.originalCost = 0;
             }
+            if (ship.abnormality === undefined) { 
+                ship.abnormality = null; 
+            }
         });
 
         document.getElementById('islandNameInput').value = islandName; // UIにロードした名前を反映
@@ -637,6 +830,7 @@ function loadGame() { // 関数名をloadGameに変更
         updateStatus();
         document.getElementById('actionSelect').value = ""; // コマンド選択をリセット
         updateConfirmButton(); // UIを更新
+        renderActionQueue();
     } catch (e) {
         logAction("セーブデータの読み込みに失敗しました。データが破損しているか、形式が不正です。");
         console.error(e);
@@ -652,12 +846,13 @@ function saveMyIslandState() {
         food: food,
         population: population,
         turn: turn,
+        achievementPoints: achievementPoints, // 実績Ptを保存
+        tutorialMissions: tutorialMissions,
         islandName: islandName,
         monster: monster ? JSON.parse(JSON.stringify(monster)) : null,
         actionQueue: JSON.parse(JSON.stringify(actionQueue)),
-        warships: JSON.parse(JSON.stringify(warships)) // 軍艦データを保存
+        warships: JSON.parse(JSON.stringify(warships))
     };
-    // localStorage にも保存しておく（ページリロード対策）
     localStorage.setItem('myIslandState', JSON.stringify(myIslandState));
 }
 
@@ -674,6 +869,10 @@ function loadMyIslandState() {
             food: 1000,
             population: 0,
             turn: 0,
+            achievementPoints: 0,
+            tutorialMissions: {
+            '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false
+        },
             islandName: "MyIsland",
             monster: null,
             actionQueue: [],
@@ -688,6 +887,8 @@ function loadMyIslandState() {
     food = myIslandState.food;
     population = myIslandState.population;
     turn = myIslandState.turn;
+    achievementPoints= myIslandState.achievementPoints;
+    tutorialMissions= myIslandState.tutorialMissions;
     islandName = myIslandState.islandName;
     monster = myIslandState.monster ? JSON.parse(JSON.stringify(myIslandState.monster)) : null;
     actionQueue = JSON.parse(JSON.stringify(myIslandState.actionQueue));
@@ -722,6 +923,7 @@ function loadMyIslandState() {
     logAction("自島に戻りました。");
     document.getElementById('actionSelect').value = ""; // コマンド選択をリセット
     updateConfirmButton(); // UIを更新
+    renderActionQueue();
 }
 
 
@@ -750,6 +952,7 @@ function resetGame() {
     isViewingOtherIsland = false; // 初期化時は自分の島にいる
     document.getElementById('actionSelect').value = "";
     updateConfirmButton();
+    renderActionQueue();
     logAction("島が初期化されました。");
 }
 
@@ -771,21 +974,17 @@ function getProtectingDefenseFacility(targetX, targetY) {
 }
 
 function handleWarshipAttacks() {
-    // A copy of map and islandName to allow the function to work on the current *global* state.
     const currentMap = map;
     const currentIslandName = islandName;
-
-    // Filter for active, dispatched warships not at their home island and with ammo
     const activeAttackingWarships = warships.filter(ship =>
         ship.currentDurability > 0 &&
         ship.currentAmmo > 0 &&
-        ship.homePort !== currentIslandName // Only attack if not at home port
+        ship.homePort !== currentIslandName
     );
 
     activeAttackingWarships.forEach(warship => {
         let attacksPerformed = 0;
         const totalAttacks = warship.mainGun + warship.torpedo;
-
         logAction(`${warship.name} (${warship.homePort}籍) が自動攻撃を開始します。`);
         let attackRadius = 1; // 3x3 range (radius 1 from center means 1 tile in each direction, so 3x3 total)
         if (warship.reconnaissance === 1) attackRadius = 2; // 5x5 range
@@ -793,12 +992,14 @@ function handleWarshipAttacks() {
 
 
         for (let i = 0; i < totalAttacks; i++) {
+            if (warship.abnormality === 'fire') {
+                logAction(`軍艦 ${warship.name} は火災が発生しているため、攻撃できません。`);
+                break;
+            }
             if (warship.currentAmmo <= 0) {
                 logAction(`${warship.name} は弾薬がなくなりました。`);
                 break;
             }
-
-            // Randomly select a target within the attack range
             let targetX, targetY;
             let validTargetFound = false;
             let attempts = 0;
@@ -820,11 +1021,9 @@ function handleWarshipAttacks() {
                         !targetTile.facility &&
                         !(monster && monster.x === targetX && monster.y === targetY) &&
                         !(warships.find(ship => ship.x === targetX && ship.y === targetY && ship !== warship)); // Check for other warships
-
                     const targetWarship = warships.find(ship => ship.x === targetX && ship.y === targetY && ship !== warship);
                     const isTargetSameHomeportWarship = targetWarship && (targetWarship.homePort === warship.homePort);
                     const isWreckage = targetWarship && targetWarship.currentDurability <= 0;
-
                     if (!isSeaOrWasteWithoutFacility && !isTargetSameHomeportWarship && !isWreckage) {
                         validTargetFound = true;
                     }
@@ -843,8 +1042,6 @@ function handleWarshipAttacks() {
             } else if (warship.accuracyImprovement === 2) {
                 hitChance = 0.22;
             }
-
-            // Defense facility interference (only if accuracyImprovement is not 1)
             let protectingDefenseFacility = null;
             if (warship.accuracyImprovement !== 1) {
                 protectingDefenseFacility = getProtectingDefenseFacility(targetX, targetY);
@@ -862,15 +1059,12 @@ function handleWarshipAttacks() {
 
                 let expGained = 0;
                 let targetType = "不明な施設";
-
-                // Check for monster hit
                 if (monster && monster.x === targetX && monster.y === targetY) {
                     expGained += 1;
                     targetType = "怪獣";
                     monster = null; // Monster is "destroyed"
                     logAction(`${warship.name} は怪獣を討伐し、1 EXPを獲得しました！`);
                 } else {
-                    // Check for other warship hit (assume any other warship on the map is an "enemy" if it's not from our homeport)
                     const otherWarshipAtTarget = warships.find(ship => ship.x === targetX && ship.y === targetY && ship !== warship && ship.homePort !== warship.homePort); // Ensure it's not our own warship or from same homeport
                     if (otherWarshipAtTarget) {
                         expGained += 1;
@@ -884,6 +1078,7 @@ function handleWarshipAttacks() {
                         }else{
                         logAction(`${otherWarshipAtTarget.name}は${warship.name}の砲撃を受けましたが、完全に動じないようです。 残り耐久: ${otherWarshipAtTarget.currentDurability}`);
                         }
+                        checkAbnormalityOnHit(otherWarshipAtTarget);
                         otherWarshipAtTarget.currentDurability -= 1; // Reduce durability
                         if (otherWarshipAtTarget.currentDurability <= 0) {
                             otherWarshipAtTarget.fuel = 0; // 残り燃料を0に
@@ -945,7 +1140,12 @@ if (warship.exp === "NaN") {
 window.confirmAction = function () {
   const action = document.getElementById('actionSelect').value;
   const targetTileSelected = (selectedX !== null && selectedY !== null);
-
+  const MAX_QUEUE_SIZE = 20;
+    if (actionQueue.length >= MAX_QUEUE_SIZE) {
+        logAction(`計画キューが満杯です（最大${MAX_QUEUE_SIZE}個）。`);
+        return; // キューが満杯なら処理を中断
+    }
+const keepOptionSelected = document.getElementById('keepOptionSelected').checked;
   // 他の島を見ているときの処理
   if (isViewingOtherIsland) {
       if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') {
@@ -979,6 +1179,7 @@ window.confirmAction = function () {
           document.getElementById('actionForOtherIslandOutput').value = encodedAction;
           logAction(`他島への行動が「他島への行動」欄に出力されました。`);
           document.getElementById('actionSelect').value = ""; // コマンド選択をリセット
+          updateConfirmButton();
           updateConfirmButton(); // UIを更新
           return;
       } else if (action === 'returnToMyIsland') {
@@ -993,16 +1194,7 @@ window.confirmAction = function () {
       }
   }
 
-
-  // 自分の島を見ているときの処理
-  // 1ターンに2つまでしか計画できないようにする
-  if (actionQueue.length >= 2) {
-    logAction(`1ターンに計画できるのは2つまでです。`);
-    return;
-  }
-
   if (!action) return;
-
   // タイル選択が必要なアクションでタイルが選択されていない場合
   const requiresTileSelection = ['buildFarm', 'buildFactory', 'buildPort', 'buildGun', 'buildDefenseFacility', 'buildWarship', 'refuelWarship', 'resupplyWarshipAmmo', 'repairWarship', 'dispatchWarship', 'requestWarshipReturn', 'flatten', 'landfill', 'dig', 'cutForest', 'plantForest', 'enhanceFacility', 'selfDestructMilitaryFacility', 'bombard', 'spreadBombard', 'ppBombard'];
   if (requiresTileSelection.includes(action) && !targetTileSelected) {
@@ -1051,7 +1243,7 @@ window.confirmAction = function () {
     actionQueue.push({ x: selectedX, y: selectedY, action, count });
     logAction(`(${selectedX},${selectedY}) に ${count}発の${action === 'bombard' ? '砲撃' : action === 'spreadBombard' ? '拡散弾砲撃' : 'PP弾砲撃'}を計画しました`);
   } else if (action === 'selfDestructMilitaryFacility') { // 名称変更
-    if (tile && (tile.facility === 'gun' || tile.facility === 'defenseFacility')) { // ハリボテ施設を削除
+    if (tile && (tile.facility === 'gun' || tile.facility === 'defenseFacility')) {
       actionQueue.push({ x: selectedX, y: selectedY, action });
       logAction(`(${selectedX},${selectedY}) の軍事施設自爆を計画しました`);
     } else {
@@ -1092,20 +1284,7 @@ if (confirm('本当にこの操作を行いますか？')) {
 } else {
 logAction(`島の初期化はキャンセルされました。`);
 }
-  } else if (action === 'buildDefenseFacility') { // 防衛施設建設
-      if (tile && tile.terrain === 'plain' && money >= 5000) {
-        actionQueue.push({ x: selectedX, y: selectedY, action });
-        logAction(`(${selectedX},${selectedY}) に防衛施設建設を計画しました`);
-      } else logAction(`(${selectedX},${selectedY}) の防衛施設建設は失敗しました（条件不適合または資金不足）`);
-  }
-  else if (action === 'enhanceFacility') { // 設備強化
-      if (tile && (tile.facility === 'farm' || tile.facility === 'factory') && !tile.enhanced && money >= 10000) {
-          actionQueue.push({ x: selectedX, y: selectedY, action });
-          logAction(`(${selectedX},${selectedY}) の設備強化を計画しました`);
-      } else {
-          logAction(`(${selectedX},${selectedY}) の設備強化は失敗しました（対象施設がないか、既に強化済みか、資金不足）`);
-      }
-  } else if (action === 'buildWarship') { // 軍艦建造
+  }else if (action === 'buildWarship') { // 軍艦建造
       if (!targetTileSelected) {
           logAction("軍艦を建造する海域を選択してください。");
           return;
@@ -1259,10 +1438,8 @@ logAction(`島の初期化はキャンセルされました。`);
     }
 
     const costPerDurability = 500000; // 耐久度1回復あたりの費用
-
     // 回復可能な耐久値を計算
     const missingDurability = ship.maxDurability - ship.currentDurability;
-
     if (missingDurability <= 0) {
         logAction(`${ship.name} の耐久度はすでに最大です。`);
         return;
@@ -1273,7 +1450,17 @@ logAction(`島の初期化はキャンセルされました。`);
         logAction(`資金が不足しています。修理には ${actualCost}G 必要です。`);
         return;
     }
-
+            if (ship.abnormality === 'ammoFire') {
+                // 弾薬庫の発火: 10以上修理で治る
+                if (repairAmount >= 10) {
+                    ship.abnormality = null;
+                    logAction(`軍艦 ${ship.name} は耐久値を${repairAmount}修理し、弾薬庫の火災は鎮火されました！`);
+                }
+            } else if (ship.abnormality !== null) {
+                // 火災、浸水、通信障害: 1以上修理で治る
+                ship.abnormality = null;
+                logAction(`軍艦 ${ship.name} は耐久値を${repairAmount}修理し、異常状態(${oldAbnormality})が復旧しました！`);
+            }
     money -= actualCost;
     ship.currentDurability += actualRepairAmount;
     logAction(`${ship.name} を ${actualRepairAmount} 耐久値分修理しました。費用: ${actualCost}G。現在の耐久度: ${ship.currentDurability}/${ship.maxDurability}`);
@@ -1322,7 +1509,7 @@ logAction(`島の初期化はキャンセルされました。`);
       warship.currentAmmo = 0; // 派遣中は弾薬0
       logAction(`軍艦「${warship.name}」を「${targetIslandName}」へ派遣する計画を立てました。`);
       logAction(`他島への行動が「他島への行動」欄に出力されました。`);
-  } else if (action === 'requestWarshipReturn') { // 軍艦帰還要請: コマンド名変更
+  } else if (action === 'requestWarshipReturn') {
       const warship = warships.find(ship => ship.x === selectedX && ship.y === selectedY);
       if (!warship) {
           logAction(`(${selectedX},${selectedY}) に軍艦が存在しません。`);
@@ -1406,7 +1593,6 @@ logAction(`島の初期化はキャンセルされました。`);
         ship.mainGun += 2;
         buffMessage = `耐久上限+3＆主砲+2`;
     }
-
     logAction(`${ship.name} を増強しました！ ${buffMessage}を獲得。現在の経験値: ${ship.exp}`);
     renderMap();
     updateStatus();
@@ -1423,8 +1609,6 @@ logAction(`島の初期化はキャンセルされました。`);
         logAction(`選択したタイルに軍艦がいません。`);
         return;
     }
-
-    // 最終確認のアラート
       const warship = warships.find(ship => ship.x === selectedX && ship.y === selectedY);
     const confirmation = confirm(`${ship.name} を除籍しますが、よろしいですか？`);
       if (warship.homePort !== islandName) {
@@ -1442,47 +1626,87 @@ logAction(`島の初期化はキャンセルされました。`);
     } else {
         logAction(`軍艦 ${ship.name} の除籍をキャンセルしました。`);
     }
-} else { // その他のタイル選択が必要なアクション
-    actionQueue.push({ x: selectedX, y: selectedY, action });
+}else {
+actionQueue.push({ x: selectedX, y: selectedY, action, keepSelected: keepOptionSelected });
     logAction(`(${selectedX},${selectedY}) に ${action} を計画しました`);
   }
-
-  document.getElementById('actionSelect').value = "";
+if (!keepOptionSelected) {
+    document.getElementById('actionSelect').value = ""; // コマンド選択をリセット
+}
+  renderActionQueue();
   updateConfirmButton();
 }
 
 // nextTurn関数をグローバルスコープで定義
 window.nextTurn = function () {
-handleWarshipAttacks();
-    warships.forEach(ship => {
-        // 軍艦が母港にいる（派遣中でなく、かつ母港の座標にいる）場合
-        if (!ship.isDispatched && ship.x === ship.homeX && ship.y === ship.homeY) {
-            // ここを ship.currentDurability に修正
-            if (ship.currentDurability < ship.maxDurability) {
-                ship.currentDurability = Math.min(ship.currentDurability + 1, ship.maxDurability);
-                logAction(`${ship.name} は母港で耐久度が1回復しました。現在の耐久度: ${ship.currentDurability}/${ship.maxDurability}`);
-            }
+turn++;
+    warships.forEach(warship => {
+        if (warship.currentDurability <= 0) return;
+        if (warship.abnormality === 'commFailure' && !warship.isDispatched) {
+            warship.abnormality = null;
+            logAction(`軍艦 ${warship.name} は帰港したため、通信障害が自動復旧しました。`);
+            // 状態がリセットされたので、今ターンの異常状態効果はスキップ
+            return; 
+        }
+
+        switch (warship.abnormality) {
+            case 'fire':
+                // 効果: 1ダメージ
+                warship.currentDurability -= 1;
+                logAction(`軍艦 ${warship.name} は火災により1ダメージを受けました。残り耐久: ${warship.currentDurability}`);
+                // 自動復旧: 25%の確率
+                if (Math.random() < 0.25) {
+                    warship.abnormality = null;
+                    logAction(`軍艦 ${warship.name} の火災が自動復旧しました。`);
+                }
+                break;
+            case 'flooding':
+                // 効果: 1ダメージ
+                warship.currentDurability -= 1;
+                logAction(`軍艦 ${warship.name} は浸水により1ダメージを受けました。残り耐久: ${warship.currentDurability}`);
+                // 自動復旧: 8%の確率
+                if (Math.random() < 0.08) {
+                    warship.abnormality = null;
+                    logAction(`軍艦 ${warship.name} の浸水が自動復旧しました。`);
+                }
+                break;
+            case 'ammoFire':
+                warship.currentDurability -= 3;
+                warship.currentAmmo = Math.max(0, warship.currentAmmo - 50);
+                logAction(`軍艦 ${warship.name} は弾薬庫の発火により3ダメージを受け、弾薬を50消費しました。残り耐久: ${warship.currentDurability}、残り弾薬: ${warship.currentAmmo}`);
+                if (warship.currentAmmo === 0) {
+                     warship.abnormality = null;
+                     logAction(`軍艦 ${warship.name} は弾薬が尽きたため、弾薬庫の発火が収まりました。`);
+                }
+                break;
+            case 'commFailure':
+                break;
+        }
+        if (warship.currentDurability <= 0 && warship.abnormality !== null) {
+            warship.currentDurability = 0;
+            warship.currentFuel = 0;
+            warship.currentAmmo = 0;
+            warship.abnormality = null;
+            logAction(`軍艦 ${warship.name} は異常状態の進行により撃沈しました！`);
         }
     });
-  // ターン開始時に他島からの行動を処理
   const otherIslandActionCode = document.getElementById('otherIslandActionInput').value;
   document.getElementById('otherIslandActionInput').value = ''; // 処理したらクリア
   if (otherIslandActionCode) {
       try {
-          // 新しいデコード方式
           const jsonString = decodeURIComponent(atob(otherIslandActionCode));
           const incomingAction = JSON.parse(jsonString);
 
           if ((incomingAction.type === 'bombard' || incomingAction.type === 'spreadBombard' || incomingAction.type === 'ppBombard') &&
               incomingAction.x !== undefined && incomingAction.y !== undefined && incomingAction.count !== undefined) {
               const { x, y, type, count } = incomingAction;
-              let errorRange = 1; // 砲撃の誤差範囲
+              let errorRange = 1;
               if (type === 'bombard') {
                   errorRange = 1;
               } else if (type === 'spreadBombard') {
                   errorRange = 2;
               } else if (type === 'ppBombard') {
-                  errorRange = 0; // 誤差なし
+                  errorRange = 0;
               }
 
               logAction(`他島から ${count}発の${type === 'bombard' ? '砲撃' : type === 'spreadBombard' ? '拡散弾砲撃' : 'PP弾砲撃'}を受けました！`);
@@ -1518,15 +1742,14 @@ handleWarshipAttacks();
                               target.facility = null;
                               logAction(`他島からの砲撃により (${tx},${ty}) の港が破壊されました`);
                           } else {
-                              // 軍艦への着弾判定
                               const targetWarship = warships.find(ship => ship.x === tx && ship.y === ty);
                               if (targetWarship) {
-                                  // 派遣中の軍艦への攻撃は無効
                                   if (targetWarship.isDispatched) {
                                       logAction(`派遣中の軍艦「${targetWarship.name}」への砲撃は無効でした。`);
                                       continue;
                                   }
                                   targetWarship.currentDurability -= 1; // 耐久値1減少
+                                  checkAbnormalityOnDamage(targetWarship, damage);
                                   if (targetWarship.currentDurability <= 0) {
                             targetWarship.fuel = 0; // 残り燃料を0に
                             targetWarship.currentFuel = 0; // 現在燃料も0に
@@ -1612,8 +1835,6 @@ handleWarshipAttacks();
           } else if (incomingAction.type === 'warshipReturnConfirmation') { // 軍艦帰還確認の受信処理 (母港側)
               const { warshipData, originalHomePort } = incomingAction;
               const returnedWarshipData = decodeWarshipData(warshipData);
-
-              // 母港: 該当する派遣中の軍艦を探して情報を更新し、派遣状態を解除
               const existingWarship = warships.find(ship =>
                   ship.homePort === returnedWarshipData.homePort &&
                   ship.name === returnedWarshipData.name &&
@@ -1654,20 +1875,26 @@ handleWarshipAttacks();
       document.getElementById('actionForOtherIslandOutput').value = ''; // 他島への行動をクリア
       logAction("ターンが進んだため、自島に戻りました。");
   }
-
-
-  // 自分の島のターン処理
-  turn++;
+  handleWarshipAttacks()
   let foodChange = 0, moneyChange = 0;
   let prevPopulation = population; // 前ターンの人口を保存
   let currentTurnPopulationGrowth = 0; // 現在のターンでの人口増加をリセット
 
   // 行動キューの処理 (最大2つまで実行)
-  const actionsToExecute = actionQueue.splice(0, Math.min(actionQueue.length, 2));
-
-  for (const task of actionsToExecute) {
-    const { x, y, action } = task;
+const ACTIONS_PER_TURN = 2; // 1ターンに実行する計画の数
+for (let i = 0; i < ACTIONS_PER_TURN; i++) {
+    if (actionQueue.length === 0) {
+        break; // キューが空になったら終了
+    }
+    // actionQueue.shift() により、実行した計画はキューから削除される（残りは保持される）
+    const task = actionQueue.shift(); 
+    const x = task.x;
+    const y = task.y;
+    const action = task.action;
     let tile = null;
+    if (x !== null && y !== null) {
+        tile = map[y][x];
+    }
     if (x !== null && y !== null) {
       tile = map[y][x];
     }else if (action === 'buildWarship') {
@@ -1714,14 +1941,16 @@ const newWarship = {
             logAction(`(${x},${y}) の住宅が取り壊されました。`);
         }
     };
-
-    if (action === 'buildFarm') {
+    if (action === 'delayAction') {
+    }
+    else if (action === 'buildFarm') {
       if (tile && tile.terrain === 'plain' && money >= 100) {
         handleHouseOverwrite(tile);
         tile.facility = 'farm';
         tile.enhanced = false; // 新規建設は強化なし
         money -= 100;
         logAction(`(${x},${y}) に農場を建設しました`);
+        checkAndCompleteMission('02', 1, 0, 250,() => map.flat().some(t => t.facility === 'farm'),'農場が1つでも建設されている');
       } else logAction(`(${x},${y}) の農場建設は失敗しました（条件不適合または資金不足）`);
     }
     else if (action === 'buildFactory') {
@@ -1731,6 +1960,7 @@ const newWarship = {
         tile.enhanced = false; // 新規建設は強化なし
         money -= 100;
         logAction(`(${x},${y}) に工場を建設しました`);
+        checkAndCompleteMission('03', 1, 0, 500,() => map.flat().some(t => t.facility === 'factory'),'工場が1つでも建設されている');
       } else logAction(`(${x},${y}) の工場建設は失敗しました（条件不適合または資金不足）`);
     }
     else if (action === 'flatten') {
@@ -1782,7 +2012,7 @@ const newWarship = {
       } else logAction(`(${x},${y}) の伐採は失敗しました（森ではありません）`);
     }
     else if (action === 'plantForest') {
-      if (tile && tile.terrain === 'plain' && money >= 200) {
+      if (tile && tile.terrain === 'plain' && tile.facility === null && money >= 200) {
         handleHouseOverwrite(tile);
         tile.terrain = 'forest';
         tile.enhanced = false; // 強化状態もリセット
@@ -1797,6 +2027,8 @@ const newWarship = {
         handleHouseOverwrite(tile);
         tile.facility = 'gun'; money -= 1200; tile.enhanced = false; // 強化状態もリセット
         logAction(`(${x},${y}) に砲台を建設しました`);
+        const guns = map.flat().filter(t => t.facility === 'gun').length;
+        checkAndCompleteMission('05', 1, 0, 1000,() => guns >= 3,'砲撃可能数が3以上になる');
       } else logAction(`(${x},${y}) の砲台建設は失敗しました（条件不適合または資金不足）`);
     }
     else if (action === 'buildDefenseFacility') { // 防衛施設建設
@@ -1806,6 +2038,7 @@ const newWarship = {
         money -= 5000;
         tile.enhanced = false; // 新規建設は強化なし
         logAction(`(${x},${y}) に防衛施設を建設しました`);
+        checkAndCompleteMission('06', 1, 0, 1000, () => map.flat().some(t => t.facility === 'defenseFacility'),'防衛施設が1つでも建設されている');
       } else logAction(`(${x},${y}) の防衛施設建設は失敗しました（条件不適合または資金不足）`);
     }
     else if (action === 'landfill') {
@@ -1819,6 +2052,7 @@ const newWarship = {
       if (food >= amount * 20) {
         food -= amount * 20; money += amount * 200;
         logAction(`食料を ${amount * 20} 輸出し ${amount * 200}G を得ました`);
+        checkAndCompleteMission('08', 2, 5000, 0, () => true, '食料輸出を行う');
       } else logAction(`食料輸出に失敗しました（食料不足）`);
     }
     else if (action === 'buildPort') {
@@ -1841,16 +2075,35 @@ const newWarship = {
       } else logAction(`(${x},${y}) の港建設は失敗しました（条件不適合または資金不足）`);
     }
     else if (action === 'dig') {
-      if (tile && tile.terrain !== 'sea' && money >= 300) {
-        if (tile.facility === 'house') { // 住宅に掘削を行った場合の人口減少
-            population -= tile.pop;
-            if (population < 0) population = 0;
+    const tile = map[y][x];
+    if (money < 300) {
+        logAction(`(${x},${y}) の掘削は失敗しました（資金不足）`);
+    } else {
+        // 資金を消費
+        money -= 300; 
+
+        if (tile.terrain !== 'sea') {
+            if (tile.facility === 'house') {
+                population -= tile.pop;
+                if (population < 0) population = 0;
+            }
+            tile.terrain = 'sea';
+            tile.facility = null; 
+            tile.pop = 0;
+            tile.enhanced = false;
+            logAction(`(${x},${y}) を掘削して海にしました`);
+        } else {
+            if (tile.facility === 'oilRig') {
+                logAction(`(${x},${y}) にはすでに油田が存在するため、発掘は失敗しました。`);
+            } else if (Math.random() < 0.02) { // 2% = 0.02
+                tile.facility = 'oilRig';
+                logAction(`(${x},${y}) を海に掘削した結果、油田を発見しました！`);
+            } else {
+                logAction(`(${x},${y}) を掘削しましたが、油田は見つかりませんでした。`);
+            }
         }
-        tile.terrain = 'sea'; tile.facility = null; tile.pop = 0; tile.enhanced = false; // 強化状態もリセット
-        money -= 300;
-        logAction(`(${x},${y}) を掘削して海にしました`);
-      } else logAction(`(${x},${y}) の掘削は失敗しました（海ではありませんまたは資金不足）`);
     }
+  }
     else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') {
       const count = task.count || 1;
       const guns = map.flat().filter(t => t.facility === 'gun').length;
@@ -1892,6 +2145,7 @@ const newWarship = {
                     logAction(`(${tx},${ty}) を守っていた防衛施設がPP弾により破壊されました！`);
                     // その後、PP弾の効果を適用（既存の攻撃ロジックに流れる）
                 } else { // PP弾でなければ防衛施設が守る
+                    renderMap();
                     logAction(`砲撃は防衛施設により無効化されました (${tx},${ty})`);
                     continue; // 次の攻撃へ
                 }
@@ -1901,6 +2155,7 @@ const newWarship = {
             if (target.terrain === 'sea') {
                 if (target.facility === 'port') {
                     target.facility = null;
+                    renderMap();
                     logAction(`砲撃で (${tx},${ty}) の港を破壊し、海になりました`);
                 } else {
                     // 軍艦への着弾判定
@@ -1924,6 +2179,7 @@ const newWarship = {
                             logAction(`砲撃が軍艦「${targetWarship.name}」に着弾しました！ (残り耐久: ${targetWarship.currentDurability})`);
                         }
                     } else {
+                        renderMap();
                         logAction(`砲撃は海に着弾しました (${tx},${ty})`);
                     }
                 }
@@ -1961,7 +2217,32 @@ const newWarship = {
             tile.terrain = 'sea';
             tile.enhanced = false; // 強化状態もリセット
             logAction(`(${x},${y}) の軍事施設が自爆し、海になりました。`);
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
 
+                    if (nx >= 0 && ny >= 0 && nx < SIZE && ny < SIZE) {
+                        const targetWarship = warships.find(ship => ship.x === nx && ship.y === ny);
+                        
+                        // 存在する軍艦で、かつ沈没状態ではない、かつ派遣中ではない（自島にいる）場合
+                        if (targetWarship && targetWarship.currentDurability > 0 && !targetWarship.isDispatched) {
+                            // 5から10のランダムなダメージを生成 (Math.floor(Math.random() * 6) + 5)
+                            const damage = Math.floor(Math.random() * 6) + 5;                           
+                            targetWarship.currentDurability -= damage;
+                            checkAbnormalityOnDamage(targetWarship, damage);
+                            if (targetWarship.currentDurability <= 0) {
+                                targetWarship.currentDurability = 0;
+                                targetWarship.currentFuel = 0; // 沈没したら燃料0
+                                targetWarship.currentAmmo = 0; // 沈没したら弾薬0
+                                logAction(`自爆により軍艦 ${targetWarship.name} (${nx},${ny}) は${damage}のダメージを受け撃沈しました！`);
+                            } else {
+                                logAction(`自爆により軍艦 ${targetWarship.name} (${nx},${ny}) は${damage}のダメージを受けました。残り耐久: ${targetWarship.currentDurability}`);
+                            }
+                        }
+                    }
+                }
+            }
             // 周囲1マスを荒地にする
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dy = -1; dy <= 1; dy++) {
@@ -1988,10 +2269,16 @@ const newWarship = {
         }
     }
     else if (action === 'enhanceFacility') { // 設備強化
-        if (tile && (tile.facility === 'farm' || tile.facility === 'factory') && !tile.enhanced && money >= 10000) {
-            tile.enhanced = true;
-            money -= 10000;
-            logAction(`(${x},${y}) の${tile.facility === 'farm' ? '農場' : '工場'}が強化されました。`);
+        if (tile && (tile.facility === 'farm' || tile.facility === 'factory'|| tile.facility === 'oilRig') && !tile.enhanced && money >= 10000) {
+tile.enhanced = true;
+        money -= 10000;
+        
+        let facilityName;
+        if (tile.facility === 'farm') facilityName = '農場';
+        else if (tile.facility === 'factory') facilityName = '工場';
+        else if (tile.facility === 'oilRig') facilityName = '海底油田';
+        logAction(`(${x},${y}) の${facilityName}が強化されました。`);
+            checkAndCompleteMission('04', 1, 0, 1000, () => true, '工場または農場に設備強化を行う');
         } else {
             logAction(`(${x},${y}) の設備強化は失敗しました。`);
         }
@@ -2033,7 +2320,8 @@ const newWarship = {
                 currentAmmo: 0, // 初期弾薬0
                 reconnaissance: recon,
                 accuracyImprovement: accuracy,
-                isDispatched: false // 新規建造時は派遣されていない
+                isDispatched: false,
+                abnormality: null
             };
 let hiyou = (durability * 10000000) + (mainGun * 12000000) + (torpedo * 10000000) + (antiAir * 5000000) + (ammo * 100000) + (recon * 12500000) + (accuracy * 50000000);
             warships.push(newWarship);
@@ -2079,20 +2367,20 @@ let hiyou = (durability * 10000000) + (mainGun * 12000000) + (torpedo * 10000000
         // この処理もconfirmActionで他島への行動として出力済みのため、ここでは何もせずスキップ
     }
   }
-  // actionQueueはspliceで処理済みのためクリアは不要
   // 軍艦の移動 (派遣中の軍艦は移動しない)
   for (const warship of warships) {
       if (!warship.isDispatched && warship.currentFuel >= 1) { // 派遣中でない軍艦のみ移動
+            if (warship.abnormality === 'flooding') {
+                logAction(`軍艦 ${warship.name} は浸水しているため、移動できません。`);
+                continue; // 次のアクションへ
+            }
           warship.currentFuel -= 1; // 燃料消費
           const possibleMoves = [];
           for (let dx = -1; dx <= 1; dx++) {
               for (let dy = -1; dy <= 1; dy++) {
                   const nx = warship.x + dx;
                   const ny = warship.y + dy;
-
-                  // 自身の現在地は除外
                   if (dx === 0 && dy === 0) continue;
-
                   // マップ範囲内であること
                   if (nx >= 0 && ny >= 0 && nx < SIZE && ny < SIZE) {
                       const targetTile = map[ny][nx];
@@ -2157,7 +2445,40 @@ if (turn > 0 && turn % 50 === 0) {
         }
     }
 }
-  // 自動住宅形成
+let totalOilRigIncome = 0;
+let oilRigLoss = 0;
+let remainingOilRigCount = 0; // 残存数をカウント
+
+for (let y = 0; y < SIZE; y++) { 
+    for (let x = 0; x < SIZE; x++) { 
+        const tile = map[y][x]; 
+        if (tile.facility === 'oilRig') {
+            
+            // 収入計算: 強化なら2基相当 (2000G)、そうでなければ1基相当 (1000G)
+            const income = tile.enhanced ? 50000 : 25000; 
+            totalOilRigIncome += income;
+            
+            // 枯渇率計算: 既存の枯渇率を0.02と仮定し、強化なら1.75倍 (0.035)
+            const baseLossRate = 0.02; 
+            const lossRate = tile.enhanced ? baseLossRate * 1.75 : baseLossRate; 
+            if (Math.random() < lossRate) { 
+                oilRigLoss++; 
+                const facilityName = tile.enhanced ? '高効率海底油田' : '海底油田';
+                
+                tile.facility = null; 
+                tile.enhanced = false; // 強化状態もリセット 
+                
+                logAction(`(${x},${y}) の${facilityName}が枯渇しました。`); 
+            } else {
+                remainingOilRigCount++;
+            }
+        } 
+    } 
+}
+moneyChange += totalOilRigIncome; // 合計収入を加算
+if (remainingOilRigCount > 0 || totalOilRigIncome > 0) {
+    logAction(`海底油田から${totalOilRigIncome}Gを獲得しました。`); 
+}
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const tile = map[y][x];
@@ -2177,7 +2498,7 @@ if (turn > 0 && turn % 50 === 0) {
   }
 
   population += currentTurnPopulationGrowth; // 合計の人口増加分を反映
-
+  checkAndCompleteMission('07', 2, 1000, 0, () => population >= 50000, '総人口が5万人に達する');
   foodChange -= Math.floor(population / 200) * 5;
   food += foodChange;
   money += moneyChange;
@@ -2407,9 +2728,10 @@ if (totalMaintenanceCost > 0) {
 
   saveMyIslandState(); // ターン終了後、自分の島の状態を保存
   updateStatus();
-  renderMap();
+  renderActionQueue()
   const populationChange = population - prevPopulation; // 人口の増減を計算
-  logAction(`資金収支: ${moneyChange - totalMaintenanceCost}G, 食料: ${foodChange >= 0 ? '+' : ''}${foodChange}, 人口変化: ${populationChange >= 0 ? '+' : ''}${populationChange}`);
+  logAction(`資金収支: ${moneyChange+totalOilRigIncome - totalMaintenanceCost}G, 食料: ${foodChange >= 0 ? '+' : ''}${foodChange}, 人口変化: ${populationChange >= 0 ? '+' : ''}${populationChange}`);
+  renderMap();
 }
 
 function getMonumentLevel() {
@@ -2435,6 +2757,8 @@ window.saveGame = function() {
         food: myIslandState.food,
         population: myIslandState.population,
         turn: myIslandState.turn,
+        achievementPoints : myIslandState.achievementPoints,
+        tutorialMissions : myIslandState.tutorialMissions,
         islandName: myIslandState.islandName,
         monster: myIslandState.monster,
         actionQueue: myIslandState.actionQueue,
@@ -2464,12 +2788,15 @@ window.loadGame = function() {
         const jsonString = String.fromCharCode(...charCodes);
 
         const gameState = JSON.parse(jsonString);
-
         map = gameState.map;
         money = gameState.money;
         food = gameState.food;
         population = gameState.population;
         turn = gameState.turn;
+        achievementPoints = gameState.achievementPoints || 0; // ★ 実績Ptをロード、旧データ対応で0を代入
+        tutorialMissions = gameState.tutorialMissions || { // ★ チュートリアルミッションをロード、旧データ対応
+            '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false
+        };
         islandName = gameState.islandName || "MyIsland";
         monster = gameState.monster;
         actionQueue = gameState.actionQueue || []; // ロード時にactionQueueがない場合に対応
@@ -2489,8 +2816,11 @@ window.loadGame = function() {
             if (ship.isDispatched === undefined) {
                 ship.isDispatched = false;
             }
-            if (ship.maxFuel === undefined) { // 旧データ対応
+            if (ship.maxFuel === undefined) {
                 ship.maxFuel = 100;
+            }
+            if (ship.abnormality === undefined) { 
+                ship.abnormality = null; 
             }
         });
 
