@@ -1,4 +1,4 @@
-  let monster = null;
+let monster = null;
 const MONSTER_TYPES = {
   1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, condition: (pop) => pop >= 60000 },
   2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', condition: (pop) => pop >= 120000 },
@@ -23,7 +23,6 @@ const MONSTER_TYPES = {
   let economicCrisisTurns = 0; // 経済危機の残りターン数
   let frozenMoney = 0; // 経済危機による凍結資金
   let volcanoTurns = 0; // 火山の噴火 残りターン数
-
   // 軍艦の色変化条件
   const WARSHIP_CAPS = {
       maxDurability: 30,
@@ -2332,7 +2331,13 @@ const newWarship = {
     }
     else if (action === 'enhanceFacility') { // 設備強化
         if (tile && (tile.facility === 'farm' || tile.facility === 'factory'|| tile.facility === 'oilRig') && !tile.enhanced && money >= 500000) {
-tile.enhanced = true;
+        if (tile.facility === 'farm') {
+          maxScale += 25000;
+        }else if (tile.facility === 'factory'){
+          maxScale += 50000;
+        }else{
+          tile.enhanced = true;
+        }
         money -= 500000;
         let facilityName;
         if (tile.facility === 'farm') facilityName = '農場';
@@ -2345,8 +2350,6 @@ tile.enhanced = true;
         }
     } else if (action === 'buildWarship') { // 軍艦建造
         const { name, durability, mainGun, torpedo, antiAir, ammo, recon, accuracy, cost } = task.warshipData;
-
-        // 再度、場所と費用を確認
         let adjacentToPort = false;
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
