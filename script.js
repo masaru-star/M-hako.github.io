@@ -19,10 +19,10 @@ const MONSTER_TYPES = {
   let selectedX = null, selectedY = null;
   let actionQueue = [];
   let islandName = "MyIsland";
-  let warships = []; // 軍艦の配列を追加
-  let economicCrisisTurns = 0; // 経済危機の残りターン数
-  let frozenMoney = 0; // 経済危機による凍結資金
-  let volcanoTurns = 0; // 火山の噴火 残りターン数
+  let warships = []; // 軍艦の配列
+  let economicCrisisTurns = 0;
+  let frozenMoney = 0;
+  let volcanoTurns = 0;
   // 軍艦の色変化条件
   const WARSHIP_CAPS = {
       maxDurability: 30,
@@ -40,13 +40,7 @@ function factorial(n) {
     }
     return result;
 }
-/**
- * 軍艦がダメージを受けた際に、火災または弾薬庫の発火を判定する
- * @param {object} warship ダメージを受けた軍艦オブジェクト
- * @param {number} damage 実際に受けたダメージ量 (今回は使用しないが汎用性のために残す)
- */
 function checkAbnormalityOnDamage(warship, damage) {
-    // 既に異常状態か、沈没している場合はスキップ
     if (warship.currentDurability <= 0 || warship.abnormality !== null) {
         return; 
     }
@@ -66,10 +60,6 @@ function checkAbnormalityOnDamage(warship, damage) {
         }
     }
 }
-/**
- * 砲撃が命中した際に、通信障害または浸水を判定する
- * @param {object} target 命中した軍艦オブジェクト
- */
 function checkAbnormalityOnHit(target) {
     if (target.currentDurability <= 0 || target.abnormality !== null) {
         return;
@@ -79,9 +69,6 @@ function checkAbnormalityOnHit(target) {
     if (target.currentDurability <= 50 && Math.random() < 0.05) {
         newAbnormality = 'flooding';
     }
-
-    // 1. 通信障害の判定 (命中した際、1%の確率)
-    // 自島にいる場合は発生しない (isDispatchedがtrueの時のみ発生)
     if (newAbnormality === null && target.isDispatched && Math.random() < 0.01) {
         newAbnormality = 'commFailure'; 
     }
@@ -109,8 +96,6 @@ function getActionName(action, x, y, extraData) {
         sellMonument: '石碑売却', initializeIsland: '島の初期化', delayAction: '遅延行動' 
     };
     name = actionNames[action] || action;
-
-    // 計画の詳細情報を名前に組み込む
     if (action === 'exportFood' && extraData && extraData.amount) {
         name += ` (${extraData.amount * 20} 食料)`;
     } else if ((action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') && extraData && extraData.count) {
@@ -132,14 +117,10 @@ function getActionName(action, x, y, extraData) {
         cost = cost = 300 * extraData.oilFactor ** 2;
     name += ` (予算:${cost} レベル:${extraData.oilFactor})`;
     }
-    
-    // 座標の表示
     let coord = (x !== null && y !== null) ? `(${x},${y})` : '';
 
     return { name, coord };
 }
-
-// 計画キューの表示を更新する関数
 function renderActionQueue() {
     const list = document.getElementById('actionQueueList');
     if (!list) return;
@@ -147,11 +128,9 @@ function renderActionQueue() {
     const MAX_QUEUE_SIZE = 20; 
     for (let index = 0; index < MAX_QUEUE_SIZE; index++) {
         const listItem = document.createElement('li');
-        const task = actionQueue[index]; // キューから計画を取得
-        // 2桁の番号を先頭に追加
+        const task = actionQueue[index];
         const displayIndex = (index + 1).toString().padStart(2, '0');
         if (task) {
-            // 計画が設定されている場合
             const { name, coord } = getActionName(task.action, task.x, task.y, task);
             let classList = "action-link";
             if (index < 2) {
@@ -169,7 +148,6 @@ function renderActionQueue() {
         list.appendChild(listItem);
     }
 }
-// 計画を撤回する関数
 window.cancelAction = function (index) {
     if (index >= 0 && index < actionQueue.length) {
         const actionToCancel = actionQueue[index];
@@ -177,7 +155,7 @@ window.cancelAction = function (index) {
         actionQueue.splice(index, 1);
         logAction(`計画「${coord} ${name}」を撤回しました。`);
         renderActionQueue();
-        saveMyIslandState(); // 島の状態を保存
+        saveMyIslandState();
     }
 }
 function checkAndCompleteMission(missionId, pt, foodReward, moneyReward, checkFunc, logMessage) {
@@ -193,7 +171,6 @@ function checkAndCompleteMission(missionId, pt, foodReward, moneyReward, checkFu
     }
     return false;
 }
-  // 上限到達数に応じて軍艦名のクラスを返す関数
   function getWarshipCapClass(ship) {
       let cappedCount = 0;
       if (ship.maxDurability >= WARSHIP_CAPS.maxDurability) cappedCount++;
@@ -208,32 +185,26 @@ function checkAndCompleteMission(missionId, pt, foodReward, moneyReward, checkFu
       if (cappedCount === 4) return 'warship-name-cap-4';
       if (cappedCount === 5) return 'warship-name-cap-5';
       if (cappedCount === 10) return 'warship-sp';
-      return ''; // 上限到達が2つ未満の場合は色を付けない
+      return '';
   }
-let myIslandState = null; // 自分の島の状態を保存する変数
+let myIslandState = null;
 let isViewingOtherIsland = false; // 他の島を見ているかどうかのフラグ
 
 function randTerrain() {
   const r = Math.random();
-  // 海が生成される確率も加える
-  if (r < 0.2) return 'sea'; // 海の確率を調整
+  if (r < 0.2) return 'sea'; // 海の確率
   else if (r < 0.5) return 'plain';
   else if (r < 0.7) return 'waste';
   else return 'forest';
 }
 function getGunCount() {
     let targetMap = map;
-    // 他の島を見ている場合、自分の島の状態から砲台数を取得する
-    // ただし、自島状態がまだない（初期状態）場合は砲台は0とする
     if (isViewingOtherIsland && myIslandState && myIslandState.map) {
         targetMap = myIslandState.map;
     } else if (isViewingOtherIsland && !myIslandState) {
         return 0;
     }
-
     if (targetMap.length === 0) return 0;
-
-    // mapを走査して砲台 (facility: 'gun') の数を数える
     let count = 0;
     targetMap.forEach(row => {
         row.forEach(tile => {
@@ -247,18 +218,15 @@ function getGunCount() {
 function initMap() {
   map = Array.from({ length: SIZE }, (_, y) =>
     Array.from({ length: SIZE }, (_, x) => {
-      // 周囲4マスを海にする
+      // 外周4マスは海
       if (x < 4 || y < 4 || x >= SIZE - 4 || y >= SIZE - 4) {
         return { terrain: 'sea', facility: null, pop: 0, enhanced: false };
       }
-      // ランダムな陸地配置（森、平地、荒地）と海
       const terrain = randTerrain();
       return { terrain, facility: null, pop: 0, enhanced: false };
     })
   );
   let placed = 0;
-  // 初期住宅を2つ配置
-  // 平地を探し、すでに施設がない場所に配置する
   const possibleHouseLocations = [];
   for (let y = 4; y < SIZE - 4; y++) {
     for (let x = 4; x < SIZE - 4; x++) {
@@ -268,8 +236,6 @@ function initMap() {
       }
     }
   }
-
-  // シャッフルしてランダムに2つ選択
   possibleHouseLocations.sort(() => Math.random() - 0.5);
 
   for (let i = 0; i < Math.min(2, possibleHouseLocations.length); i++) {
@@ -307,15 +273,15 @@ const moneyElement = document.getElementById('money');
   document.getElementById('population').textContent = population < 0 ? 0 : population;
   document.getElementById('turn').textContent = turn;
   document.getElementById('currentIslandName').textContent = islandName;
-  document.getElementById('achievementPoints').textContent = achievementPoints; // ここで値を反映
+  document.getElementById('achievementPoints').textContent = achievementPoints; // 値を反映
   const guns = getGunCount();
   document.getElementById('gunCount').textContent = guns;
-  let landMap = map; // デフォルトは現在のマップ
+  let landMap = map;
   
   if (isViewingOtherIsland && myIslandState && myIslandState.map) {
       landMap = myIslandState.map;
   } else if (isViewingOtherIsland && !myIslandState) {
-      landMap = []; // 面積 0 扱い
+      landMap = [];
   } else if (!isViewingOtherIsland) {
       landMap = map;
   }
@@ -331,24 +297,20 @@ const moneyElement = document.getElementById('money');
   }
   const landArea = landTiles * 10;
   document.getElementById('landArea').textContent = landArea;
-  // 他の島を見ているときは資金、食料、人口を非表示にする
   document.getElementById('money').style.visibility = isViewingOtherIsland ? 'hidden' : 'visible';
   document.getElementById('food').style.visibility = isViewingOtherIsland ? 'hidden' : 'visible';
   document.getElementById('population').style.visibility = isViewingOtherIsland ? 'hidden' : 'visible';
 }
-
-// confirmButtonの表示/非表示を更新する関数
 window.updateConfirmButton = function () {
   const actionSelect = document.getElementById('actionSelect');
   const warshipSubSelect = document.getElementById('warshipSubSelect');
-
   let action = actionSelect.value;
   if (action === 'warshipTool') {
       warshipSubSelect.style.display = 'inline-block';
       action = warshipSubSelect.value; 
   } else {
       warshipSubSelect.style.display = 'none';
-      warshipSubSelect.value = ""; // サブセレクトをリセット
+      warshipSubSelect.value = "";
   }
   document.getElementById('confirmBtn').disabled = (action === "");
   document.getElementById('exportAmount').style.display = 'none';
@@ -386,7 +348,6 @@ window.updateConfirmButton = function () {
       document.getElementById('touristCodeInput').style.display = 'inline-block';
   } else if (action === 'buildWarship') {
       document.getElementById('warshipBuildInputs').style.display = 'block';
-      // デフォルト値を設定
       document.getElementById('warshipName').value = "無銘艦";
       document.getElementById('warshipDurability').value = 2;
       document.getElementById('warshipMainGun').value = 1;
@@ -418,26 +379,23 @@ function renderMap() {
       const displayFacility = (isViewingOtherIsland && (tile.facility === 'gun' || tile.facility === 'defenseFacility' || tile.facility === 'Monument')) ? 'forest' : tile.facility;
       const displayTerrain = (isViewingOtherIsland && (tile.facility === 'gun' || tile.facility === 'defenseFacility' || tile.facility === 'Monument')) ? 'forest' : tile.terrain;
 
-      cell.className = displayTerrain; // 地形クラス
-      if (displayFacility) cell.classList.add(displayFacility); // 施設クラス
-
-      // 強化施設のクラスを追加
+      cell.className = displayTerrain;
+      if (displayFacility) cell.classList.add(displayFacility);
       if (tile.enhanced) {
           if (tile.facility === 'farm') cell.classList.add('enhancedFarm');
           if (tile.facility === 'factory') cell.classList.add('enhancedFactory');
           if (tile.facility === 'oilRig') cell.classList.add('enhancedOilRig');
       }
-      // 軍艦の表示
       const warshipAtTile = warships.find(ship => ship.x === x && ship.y === y);
-      if (warshipAtTile && !isViewingOtherIsland) { // 自分の島を見ているときのみ軍艦を表示
-          if (warshipAtTile.currentDurability <= 0) { // 沈没している場合
+      if (warshipAtTile && !isViewingOtherIsland) {
+          if (warshipAtTile.currentDurability <= 0) {
               cell.classList.add('warship-wreckage');
-              cell.textContent = 'x'; // 残骸アイコン
+              cell.textContent = 'x';
           } else {
               cell.classList.add('warship');
               if (warshipAtTile.isDispatched) {
-                  cell.classList.add('warship-dispatched'); // 派遣中のスタイル
-                  cell.textContent = '⛶'; // 派遣中アイコン
+                  cell.classList.add('warship-dispatched');
+                  cell.textContent = '⛶';
               } else {
                   cell.textContent = '🚢';
               }
@@ -453,19 +411,15 @@ function renderMap() {
                              displayFacility === 'oilRig' ? '🛢️' :'';
                              displayTerrain === 'mountain' ? '⛰️' : '';
       }
-
-      // 強化施設のアイコンはそのまま
       if (tile.enhanced) {
           if (tile.facility === 'farm') cell.textContent = '🌾';
           if (tile.facility === 'factory') cell.textContent = '🏭';
           if (tile.facility === 'oilRig') cell.textContent = '🛢️';
       }
-
       if (selectedX === x && selectedY === y) cell.classList.add('selected');
       cell.onmouseover = () => showTileInfo(x, y);
       cell.onclick = () => selectTile(x, y);
       row.appendChild(cell);
-      // ★変更: monsters 配列をチェック
       const monsterAtTile = monsters.find(m => m.x === x && m.y === y);
       if (monsterAtTile) {
         cell.textContent = '👾';
@@ -492,9 +446,7 @@ function showTileInfo(x, y) {
 
     let facilityName = facilityNameMap[tile.facility] || tile.facility;
 
-    if (tile.enhanced) { // 強化施設の表示名
-        if (tile.facility === 'farm') facilityName = '強化農場';
-        if (tile.facility === 'factory') facilityName = '強化工場';
+    if (tile.enhanced) {
         if (tile.facility === 'oilRig') facilityName = '高効率海底油田';
     }
     info += ` / 建物: ${facilityName}`;
@@ -509,7 +461,6 @@ function showTileInfo(x, y) {
 
   const warshipAtTile = warships.find(ship => ship.x === x && ship.y === y);
   if (warshipAtTile && !isViewingOtherIsland) {
-      // 経験値表示を修正
       const expDisplay = warshipAtTile.exp === "NaN" ? "NaN" : warshipAtTile.exp;
       const warshipCapClass = getWarshipCapClass(warshipAtTile);
 const warshipNameDisplay = warshipCapClass ? `<span class="${warshipCapClass}">${warshipAtTile.name}</span>` : warshipAtTile.name;
@@ -534,8 +485,6 @@ function selectTile(x, y) {
   selectedY = y;
   renderMap();
 }
-
-// logAction関数を修正して、メッセージに基づいて色を適用
 function logAction(msg) {
   const log = document.getElementById('log');
   const entry = document.createElement('div');
@@ -547,8 +496,6 @@ function logAction(msg) {
   }
   log.prepend(entry);
 }
-
-// 観光者コードを生成する関数
 function generateTouristCode() {
     const simplifiedMap = map.map(row => row.map(tile => {
         let touristTerrain = tile.terrain;
@@ -566,11 +513,8 @@ function generateTouristCode() {
         turn: turn
     };
     const jsonString = JSON.stringify(touristData);
-    // 新しいエンコード方式 (btoaとencodeURIComponentを組み合わせる)
     return btoa(encodeURIComponent(jsonString));
 }
-
-// 軍艦データをコードに変換する関数
 function encodeWarshipData(warship) {
     const data = {
         homePort: warship.homePort,
@@ -588,26 +532,20 @@ function encodeWarshipData(warship) {
         reconnaissance: warship.reconnaissance,
         accuracyImprovement: warship.accuracyImprovement,
         isDispatched: warship.isDispatched,
-        originalCost: warship.originalCost || 0, // 追加
+        originalCost: warship.originalCost || 0,
         abnormality: warship.abnormality || 0
     };
     const jsonString = JSON.stringify(data);
     return btoa(encodeURIComponent(jsonString));
 }
-
-// コードから軍艦データをデコードする関数
 function decodeWarshipData(encodedData) {
     const jsonString = decodeURIComponent(atob(encodedData));
     const data = JSON.parse(jsonString);
-    // 互換性維持のための初期化
     if (data.isDispatched === undefined) data.isDispatched = false;
     if (data.maxFuel === undefined) data.maxFuel = 100;
     if (data.originalCost === undefined) data.originalCost = 0; // 追加
     return data;
 }
-
-
-// 自分の島の状態を保存
 function saveGame() {
     const gameState = {
         map: JSON.parse(JSON.stringify(map)),
@@ -619,12 +557,11 @@ function saveGame() {
         tutorialMissions: tutorialMissions,
         islandName: islandName,
         monster: null,
-        monsters: JSON.parse(JSON.stringify(monsters)), // 新しい配列を保存
+        monsters: JSON.parse(JSON.stringify(monsters)),
         actionQueue: JSON.parse(JSON.stringify(actionQueue)),
         warships: JSON.parse(JSON.stringify(warships)) // 軍艦データを保存
     };
     const jsonString = JSON.stringify(gameState);
-    // 新しいエンコード方式 (btoaとencodeURIComponentを組み合わせる)
     document.getElementById('saveLoadData').value = btoa(encodeURIComponent(jsonString));
     logAction("ゲームがセーブされました。データをテキストエリアからコピーしてください。");
 }
@@ -636,7 +573,6 @@ function loadGame() {
         return;
     }
     try {
-        // 新しいデコード方式
         const jsonString = decodeURIComponent(atob(encodedData));
         const gameState = JSON.parse(jsonString);
 
@@ -650,17 +586,14 @@ function loadGame() {
             '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false
         };
         islandName = gameState.islandName || "MyIsland";
-        
-        // ★変更: 旧 monster データ処理
-        monsters = gameState.monsters || []; // 新しい形式を優先
-        if (gameState.monster && !gameState.monsters) { // 旧形式(monster)があり、新形式(monsters)がない
+        monsters = gameState.monsters || [];
+        if (gameState.monster && !gameState.monsters) {
             const oldMonster = gameState.monster;
-            // mapデータ(gameState.map)を使って地形チェック
             if (gameState.map[oldMonster.y] && gameState.map[oldMonster.y][oldMonster.x] && gameState.map[oldMonster.y][oldMonster.x].terrain !== 'sea') { // 海にいない場合
                 monsters.push({
                     x: oldMonster.x,
                     y: oldMonster.y,
-                    typeId: 1, // シマオロシ
+                    typeId: 1,
                     hp: 1
                 });
                 logAction("旧バージョンの怪獣を「怪獣シマオロシ」として引き継ぎました。");
@@ -668,12 +601,9 @@ function loadGame() {
                 logAction("旧バージョンの怪獣は海にいたため、消滅しました。");
             }
         }
-        monster = null; // 旧 monster 変数は使わない
-
-        actionQueue = gameState.actionQueue || []; // ロード時にactionQueueがない場合に対応
-        warships = gameState.warships || []; // 軍艦データをロード
-
-        // 過去のセーブデータにenhancedプロパティがない場合のために初期化
+        monster = null;
+        actionQueue = gameState.actionQueue || [];
+        warships = gameState.warships || [];
         map.forEach(row => row.forEach(tile => {
             if (tile.enhanced === undefined) {
                 tile.enhanced = false;
@@ -682,28 +612,26 @@ function loadGame() {
                 tile.MonumentLevel = 0;
             }
     if ((tile.facility === 'farm' || tile.facility === 'factory') && tile.scale === undefined) {
-        // 初期値と上限の設定
         if (tile.facility === 'farm') {
             tile.scale = 10000;
-            tile.maxScale = tile.enhanced ? 75000 : 50000; // 強化済みなら上限+25000として扱う
+            tile.maxScale = tile.enhanced ? 75000 : 50000;
         } else if (tile.facility === 'factory') {
             tile.scale = 30000;
-            tile.maxScale = tile.enhanced ? 150000 : 100000; // 強化済みなら上限+50000として扱う
+            tile.maxScale = tile.enhanced ? 150000 : 100000;
         }
     }
         }));
-        // isDispatchedプロパティがない場合の初期化
         warships.forEach(ship => {
             if (ship.isDispatched === undefined) {
                 ship.isDispatched = false;
             }
-            if (ship.maxFuel === undefined) { // 旧データ対応
+            if (ship.maxFuel === undefined) {
                 ship.maxFuel = 100;
             }
                 if (ship.isKenzouWarship === undefined) {
                     ship.isKenzouWarship = false;
                 }
-            if (ship.originalCost === undefined) { // 新規データ対応
+            if (ship.originalCost === undefined) {
                 ship.originalCost = 0;
             }
             if (ship.abnormality === undefined) { 
@@ -711,14 +639,14 @@ function loadGame() {
             }
         });
 
-        document.getElementById('islandNameInput').value = islandName; // UIにロードした名前を反映
+        document.getElementById('islandNameInput').value = islandName;
         isViewingOtherIsland = false; // ロード時は自分の島にいる
-        saveMyIslandState(); // ロードした状態を自分の島の状態として保存
+        saveMyIslandState();
         logAction("ゲームがロードされました。");
         renderMap();
         updateStatus();
-        document.getElementById('actionSelect').value = ""; // コマンド選択をリセット
-        updateConfirmButton(); // UIを更新
+        document.getElementById('actionSelect').value = "";
+        updateConfirmButton();
         renderActionQueue();
     } catch (e) {
         logAction("セーブデータの読み込みに失敗しました。データが破損しているか、形式が不正です。");
@@ -726,11 +654,9 @@ function loadGame() {
     }
 }
 
-
-// 自分の島の状態を保存
 function saveMyIslandState() {
     myIslandState = {
-        map: JSON.parse(JSON.stringify(map)), // ディープコピー
+        map: JSON.parse(JSON.stringify(map)),
         money: money,
         food: food,
         population: population,
@@ -749,13 +675,11 @@ function saveMyIslandState() {
     localStorage.setItem('myIslandState', JSON.stringify(myIslandState));
 }
 
-// 自分の島の状態をロード
 function loadMyIslandState() {
     const storedState = localStorage.getItem('myIslandState');
     if (storedState) {
         myIslandState = JSON.parse(storedState);
     } else {
-        // 初回ロード時や保存されていない場合は初期状態
         myIslandState = {
             map: [], // initMapで生成される
             money: 2500,
@@ -787,12 +711,12 @@ function loadMyIslandState() {
     achievementPoints= myIslandState.achievementPoints;
     tutorialMissions= myIslandState.tutorialMissions;
     islandName = myIslandState.islandName;
-    monsters = myIslandState.monsters ? JSON.parse(JSON.stringify(myIslandState.monsters)) : []; // 新
-    if (myIslandState.monster && monsters.length === 0) { // 旧形式があり、新形式(monsters)がない
+    monsters = myIslandState.monsters ? JSON.parse(JSON.stringify(myIslandState.monsters)) : [];
+    if (myIslandState.monster && monsters.length === 0) {
         const oldMonster = myIslandState.monster;
-        if (map[oldMonster.y] && map[oldMonster.y][oldMonster.x]) { // 座標存在チェック
+        if (map[oldMonster.y] && map[oldMonster.y][oldMonster.x]) {
             const tile = map[oldMonster.y][oldMonster.x];
-            if (tile.terrain !== 'sea') { // 海にいない場合
+            if (tile.terrain !== 'sea') {
                 monsters.push({
                     x: oldMonster.x,
                     y: oldMonster.y,
@@ -805,26 +729,23 @@ function loadMyIslandState() {
             }
         }
     }
-    monster = null; // 旧変数はクリア
+    monster = null;
     actionQueue = JSON.parse(JSON.stringify(myIslandState.actionQueue));
-    warships = myIslandState.warships ? JSON.parse(JSON.stringify(myIslandState.warships)) : []; // 軍艦データをロード
+    warships = myIslandState.warships ? JSON.parse(JSON.stringify(myIslandState.warships)) : [];
     economicCrisisTurns = myIslandState.economicCrisisTurns || 0;
     frozenMoney = myIslandState.frozenMoney || 0;
     volcanoTurns = myIslandState.volcanoTurns || 0;
-    // isDispatchedプロパティがない場合の初期化
     warships.forEach(ship => {
         if (ship.isDispatched === undefined) {
             ship.isDispatched = false;
         }
-        if (ship.maxFuel === undefined) { // 旧データ対応
+        if (ship.maxFuel === undefined) {
             ship.maxFuel = 100;
         }
-        if (ship.originalCost === undefined) { // 新規データ対応
+        if (ship.originalCost === undefined) {
             ship.originalCost = 0;
         }
     });
-
-    // 過去のセーブデータにenhancedプロパティがない場合のために初期化
     map.forEach(row => row.forEach(tile => {
         if (tile.enhanced === undefined) {
             tile.enhanced = false;
@@ -833,19 +754,15 @@ function loadMyIslandState() {
             tile.MonumentLevel = 0;
         }
     }));
-
-
     isViewingOtherIsland = false;
     updateStatus();
     renderMap();
     logAction("自島に戻りました。");
-    document.getElementById('actionSelect').value = ""; // コマンド選択をリセット
+    document.getElementById('actionSelect').value = "";
     updateConfirmButton(); // UIを更新
     renderActionQueue();
 }
 
-
-// ゲームを初期設定に戻す関数
 function resetGame() {
     money = 2500;
     food = 1000;
@@ -855,7 +772,7 @@ function resetGame() {
     monster = null;
     monsters = [];
     actionQueue = [];
-    warships = []; // 軍艦データをリセット
+    warships = [];
     economicCrisisTurns = 0;
     frozenMoney = 0;
     volcanoTurns = 0;
@@ -868,18 +785,16 @@ function resetGame() {
     document.getElementById('touristCodeInput').value = '';
 
     initMap(); // マップを再初期化
-    saveMyIslandState(); // 初期化された状態を保存
+    saveMyIslandState();
     updateStatus();
     renderMap();
-    isViewingOtherIsland = false; // 初期化時は自分の島にいる
+    isViewingOtherIsland = false;
     document.getElementById('actionSelect').value = "";
     updateConfirmButton();
     renderActionQueue();
     logAction("島が初期化されました。");
 }
 
-// 特定の座標が防衛施設によって守られているかチェックする関数
-// 修正：守られている場合、その防衛施設のタイルオブジェクトを返すようにする
 function getProtectingDefenseFacility(targetX, targetY) {
     for (let y = 0; y < SIZE; y++) {
         for (let x = 0; x < SIZE; x++) {
@@ -887,7 +802,7 @@ function getProtectingDefenseFacility(targetX, targetY) {
             if (tile.facility === 'defenseFacility') {
                 const dist = Math.max(Math.abs(x - targetX), Math.abs(y - targetY));
                 if (dist <= 2) { // 防衛施設の周囲2マス
-                    return tile; // 防衛施設のタイルオブジェクトを返す
+                    return tile;
                 }
             }
         }
