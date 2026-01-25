@@ -1,5 +1,6 @@
-import { initMap } from "js/map.js";
+import { initMap,renderMap } from "js/map.js";
 import { earthquakeEffect } from "js/earthquake.js";
+import { renderActionQueue,getActionName } from "js/actionQueue.js";
 
 let monster = null;
 const MONSTER_TYPES = {
@@ -35,15 +36,6 @@ const MONSTER_TYPES = {
       maxFuel: 1000,
       maxAmmo: 1200
   };
-function factorial(n) {
-    if (n < 0) return NaN;
-    if (n === 0 || n === 1) return 1;
-    let result = 1;
-    for (let i = 2; i <= n; i++) {
-        result *= i;
-    }
-    return result;
-}
 /**
  * 軍艦がダメージを受けた際に、火災または弾薬庫の発火を判定する
  * @param {object} warship ダメージを受けた軍艦オブジェクト
@@ -97,80 +89,6 @@ function checkAbnormalityOnHit(target) {
         } else if (newAbnormality === 'commFailure') {
             logAction(`軍艦 ${target.name} に通信障害が発生しました！`);
         }
-    }
-}
-function getActionName(action, x, y, extraData) {
-    let name = '';
-    const actionNames = {
-        buildFarm: '農場建設', buildFactory: '工場建設', enhanceFacility: '設備強化', buildPort: '港建設',
-        buildGun: '砲台建設', buildDefenseFacility: '防衛施設建設', flatten: '整地', landfill: '埋め立て',
-        dig: '掘削', cutForest: '伐採', plantForest: '植林', exportFood: '食料輸出',
-        bombard: '砲撃', spreadBombard: '拡散弾砲撃', ppBombard: 'PP弾砲撃', selfDestructMilitaryFacility: '軍事施設自爆',
-        goToOtherIsland: '他の島に行く', returnToMyIsland: '自島に戻る', buildWarship: '軍艦建造',
-        refuelWarship: '燃料補給', resupplyWarshipAmmo: '弾薬補給', repairWarship: '軍艦修理',
-        enhanceWarship: '軍艦増強', decommissionWarship: '軍艦除籍', dispatchWarship: '軍艦派遣',
-        requestWarshipReturn: '軍艦帰還要請', buildMonument: '石碑建設', upgradeMonument: '石碑強化',
-        sellMonument: '石碑売却', initializeIsland: '島の初期化', delayAction: '遅延行動' 
-    };
-    name = actionNames[action] || action;
-
-    // 計画の詳細情報を名前に組み込む
-    if (action === 'exportFood' && extraData && extraData.amount) {
-        name += ` (${extraData.amount * 20} 食料)`;
-    } else if ((action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') && extraData && extraData.count) {
-        name += ` (${extraData.count} 発)`;
-    } else if (action === 'refuelWarship' && extraData && extraData.amount) {
-        name += ` (${extraData.amount} 燃料)`;
-    } else if (action === 'resupplyWarshipAmmo' && extraData && extraData.amount) {
-        name += ` (${extraData.amount} 弾薬)`;
-    } else if (action === 'repairWarship' && extraData && extraData.amount) {
-        name += ` (${extraData.amount} 耐久回復)`;
-    } else if (action === 'buildWarship' && extraData && extraData.name) {
-        name += ` (${extraData.name})`;
-    } else if ((action === 'dispatchWarship' || action === 'requestWarshipReturn') && extraData && extraData.name) {
-        name += ` (${extraData.name})`;
-    } else if (action === 'goToOtherIsland' && extraData && extraData.code) {
-        name += ` (コード: ${extraData.code.substring(0, 10)}...)`;
-    } else if (action === 'dig' && extraData && extraData.oilFactor && extraData.oilFactor > 1) {
-        let cost = 300;
-        cost = cost = 300 * extraData.oilFactor ** 2;
-    name += ` (予算:${cost} レベル:${extraData.oilFactor})`;
-    }
-    
-    // 座標の表示
-    let coord = (x !== null && y !== null) ? `(${x},${y})` : '';
-
-    return { name, coord };
-}
-
-// 計画キューの表示を更新する関数
-function renderActionQueue() {
-    const list = document.getElementById('actionQueueList');
-    if (!list) return;
-    list.innerHTML = '';
-    const MAX_QUEUE_SIZE = 20; 
-    for (let index = 0; index < MAX_QUEUE_SIZE; index++) {
-        const listItem = document.createElement('li');
-        const task = actionQueue[index]; // キューから計画を取得
-        // 2桁の番号を先頭に追加
-        const displayIndex = (index + 1).toString().padStart(2, '0');
-        if (task) {
-            // 計画が設定されている場合
-            const { name, coord } = getActionName(task.action, task.x, task.y, task);
-            let classList = "action-link";
-            if (index < 2) {
-                classList += " next-action";
-            }
-            listItem.innerHTML = `
-                ${displayIndex} 
-                <span class="${classList}" onclick="cancelAction(${index})">
-                    ${coord} ${name}
-                </span>
-            `;
-        } else {
-            listItem.innerHTML = `${displayIndex} 計画無し`;
-        }       
-        list.appendChild(listItem);
     }
 }
 // 計画を撤回する関数
@@ -358,75 +276,7 @@ window.updateConfirmButton = function () {
     document.getElementById('oilDrillFactor').style.display = 'inline-block';
   }
 }
-function renderMap() {
-  const table = document.getElementById('map');
-  table.innerHTML = '';
-  for (let y = 0; y < SIZE; y++) {
-    const row = document.createElement('tr');
-    for (let x = 0; x < SIZE; x++) {
-      const cell = document.createElement('td');
-      const tile = map[y][x];
 
-      // 他の島を見ているときは砲台と防衛施設を森に偽装
-      const displayFacility = (isViewingOtherIsland && (tile.facility === 'gun' || tile.facility === 'defenseFacility' || tile.facility === 'Monument')) ? 'forest' : tile.facility;
-      const displayTerrain = (isViewingOtherIsland && (tile.facility === 'gun' || tile.facility === 'defenseFacility' || tile.facility === 'Monument')) ? 'forest' : tile.terrain;
-
-      cell.className = displayTerrain; // 地形クラス
-      if (displayFacility) cell.classList.add(displayFacility); // 施設クラス
-
-      // 強化施設のクラスを追加
-      if (tile.enhanced) {
-          if (tile.facility === 'farm') cell.classList.add('enhancedFarm');
-          if (tile.facility === 'factory') cell.classList.add('enhancedFactory');
-          if (tile.facility === 'oilRig') cell.classList.add('enhancedOilRig');
-      }
-      // 軍艦の表示
-      const warshipAtTile = warships.find(ship => ship.x === x && ship.y === y);
-      if (warshipAtTile && !isViewingOtherIsland) { // 自分の島を見ているときのみ軍艦を表示
-          if (warshipAtTile.currentDurability <= 0) { // 沈没している場合
-              cell.classList.add('warship-wreckage');
-              cell.textContent = 'x'; // 残骸アイコン
-          } else {
-              cell.classList.add('warship');
-              if (warshipAtTile.isDispatched) {
-                  cell.classList.add('warship-dispatched'); // 派遣中のスタイル
-                  cell.textContent = '⛶'; // 派遣中アイコン
-              } else {
-                  cell.textContent = '🚢';
-              }
-          }
-      } else {
-          cell.textContent = displayFacility === 'farm' ? '🌾' :
-                             displayFacility === 'house' ? '🏠' :
-                             displayFacility === 'factory' ? '🏭' :
-                             displayFacility === 'gun' ? '🔫' :
-                             displayFacility === 'port' ? '⚓' :
-                             displayFacility === 'Monument' ? '🗿' :
-                             displayFacility === 'defenseFacility' ? '🛡️' :
-                             displayFacility === 'oilRig' ? '🛢️' :'';
-                             displayTerrain === 'mountain' ? '⛰️' : '';
-      }
-
-      // 強化施設のアイコンはそのまま
-      if (tile.enhanced) {
-          if (tile.facility === 'farm') cell.textContent = '🌾';
-          if (tile.facility === 'factory') cell.textContent = '🏭';
-          if (tile.facility === 'oilRig') cell.textContent = '🛢️';
-      }
-
-      if (selectedX === x && selectedY === y) cell.classList.add('selected');
-      cell.onmouseover = () => showTileInfo(x, y);
-      cell.onclick = () => selectTile(x, y);
-      row.appendChild(cell);
-      // ★変更: monsters 配列をチェック
-      const monsterAtTile = monsters.find(m => m.x === x && m.y === y);
-      if (monsterAtTile) {
-        cell.textContent = '👾';
-      }
-    }
-    table.appendChild(row);
-  }
-}
 function showTileInfo(x, y) {
   const tile = map[y][x];
   let info = ` (${x},${y}) 地形: ${tile.terrain}`;
