@@ -1,3 +1,5 @@
+import { monster,SIZE,money,food,population,turn,achievementPoints,tutorialMissions,map,selectedX,selectedY,actionQueue,islandName,warships } from "js/state.js";
+import { setMoney,changeMoney } from "js/state.js";
 import { initMap,renderMap } from "js/map.js";
 import { earthquakeEffect } from "js/earthquake.js";
 import { renderActionQueue,getActionName } from "js/actionQueue.js";
