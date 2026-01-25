@@ -1,4 +1,4 @@
-function initMap() {
+export function initMap() {
   map = Array.from({ length: SIZE }, (_, y) =>
     Array.from({ length: SIZE }, (_, x) => {
       // 周囲4マスを海にする
