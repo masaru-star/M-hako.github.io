@@ -7,7 +7,6 @@ export let turn = 0;
 export let achievementPoints = 0;
 export let tutorialMissions = { '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false };
 export let map = [];
-export let selectedX = null, selectedY = null;
 export let actionQueue = [];
 export let islandName = "MyIsland";
 export let warships = []; // 軍艦の配列を追加
@@ -18,3 +17,5 @@ export function setFood(value){ food = value; }
 export function changeFood(value){ food += value; }
 export function setPop(value){ population = value; }
 export function setName(value){ islandName = value; }
+export function setTurn(value){ turn = value; }
+export function setMonster(value){ monster = value; }
