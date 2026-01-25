@@ -14,3 +14,7 @@ export let warships = []; // 軍艦の配列を追加
 
 export function setMoney(value){ money = value; }
 export function changeMoney(value){ money += value; }
+export function setFood(value){ food = value; }
+export function changeFood(value){ food += value; }
+export function setPop(value){ population = value; }
+export function setName(value){ islandName = value; }
