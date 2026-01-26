@@ -9,7 +9,7 @@ export let tutorialMissions = { '01': false, '02': false, '03': false, '04': fal
 export let map = [];
 export let actionQueue = [];
 export let islandName = "MyIsland";
-export let warships = []; // 軍艦の配列を追加
+export let warships = [];
 
 export function setMoney(value){ money = value; }
 export function changeMoney(value){ money += value; }
