@@ -10,7 +10,6 @@ export let map = [];
 export let actionQueue = [];
 export let islandName = "MyIsland";
 export let warships = [];
-
 export function setMoney(value){ money = value; }
 export function changeMoney(value){ money += value; }
 export function setFood(value){ food = value; }
@@ -19,3 +18,8 @@ export function setPop(value){ population = value; }
 export function setName(value){ islandName = value; }
 export function setTurn(value){ turn = value; }
 export function setMonster(value){ monster = value; }
+
+export let myIslandState = null; // 自分の島の状態
+export let isViewingOtherIsland = false; // 他の島を見ているか
+export function setmyIslandState(value){ myIslandState = value; }
+export function isViewingOtherIsland(value){ isViewingOtherIsland = value; }
