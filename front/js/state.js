@@ -22,4 +22,4 @@ export function setMonster(value){ monster = value; }
 export let myIslandState = null; // 自分の島の状態
 export let isViewingOtherIsland = false; // 他の島を見ているか
 export function setmyIslandState(value){ myIslandState = value; }
-export function isViewingOtherIsland(value){ isViewingOtherIsland = value; }
+export function setisViewingOtherIsland(value){ isViewingOtherIsland = value; }
