@@ -14,3 +14,26 @@
 セーブデータの読み込みに失敗しました。データが破損しているか、形式が不正です。
 自島に戻りました。
 島が初期化されました。
+
+軍艦 ${warship.name} は火災が発生しているため、攻撃できません。
+${warship.name} は弾薬がなくなりました。
+防衛施設の干渉により、${warship.name} の攻撃精度が低下しました。
+${warship.name} の攻撃が (${targetX},${targetY}) に命中！
+${warship.name} は ${targetType} を討伐し、${expGained} EXPを獲得しました！
+${warship.name} は ${targetType} に命中！ (残り体力: ${monsterHit.hp})
+${otherWarshipAtTarget.name}は${warship.name}の砲撃が命中し、黒煙を噴き出しました。 残り耐久: ${otherWarshipAtTarget.currentDurability}
+${otherWarshipAtTarget.name}は${warship.name}の砲撃を受けましたが、装甲により損傷は僅かでした。 残り耐久: ${otherWarshipAtTarget.currentDurability}
+${otherWarshipAtTarget.name}は${warship.name}の砲撃を受けましたが、ほぼ無傷でした。 残り耐久: ${otherWarshipAtTarget.currentDurability}
+${otherWarshipAtTarget.name}は${warship.name}の砲撃を受けましたが、完全に動じないようです。 残り耐久: ${otherWarshipAtTarget.currentDurability}
+敵軍艦「${otherWarshipAtTarget.name}」を撃沈しました！
+${warship.name} は住宅 (${targetTile.pop}人) を攻撃し、${expGained} EXPを獲得しました！
+${warship.name} の攻撃により、石碑のレベルが1低下しました (Lv${targetTile.MonumentLevel})。
+${warship.name} は石碑（Lv1）を破壊しました。
+${warship.name} は合計 ${attacksPerformed} 回の攻撃を行いました。
+
+軍艦ツールからオプションを選択してください
+計画キューが満杯です（最大${MAX_QUEUE_SIZE}個）。
+砲撃対象のタイルを選択してください
+砲撃の数が正しく指定されていません
+砲撃に失敗しました（砲台がありません）
+砲撃に失敗しました（砲撃数が保有砲台数 (${guns}) を超えています）
