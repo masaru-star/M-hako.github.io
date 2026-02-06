@@ -36,6 +36,9 @@ Interact with other islands, battle monsters that suddenly appear, and overcome 
   **ログを確認:** 画面下の「ログ」を見て、各ターンに何が起きたか（災害やイベントなど）を確認しましょう。
 
 ## Contributors
+> **Note**: 本プロジェクトのソースコードは完全に新規に書き起こされたものであり、オリジナルのCGIプログラムのコードは含んでおりません。
 ### We welcome translations and extension suggestions.
+本作は「箱庭諸島」のリスペクト作品です。 This work is a tribute to "箱庭諸島".
 
-* **Original author:** masaru-star
+* **Original Inspired by**: 徳岡宏樹（箱庭諸島）
+* **Developer**: [masaru-star](https://github.com/masaru-star)
