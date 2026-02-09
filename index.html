@@ -35,9 +35,8 @@ SOFTWARE. -->
     ※セーブデータは直接ファイルとして保存されません。上記のテキストエリアに表示されたデータをコピーして、テキストファイルに貼り付けて保存してください。<br>
     ロードする際は、保存したデータを上記のテキストエリアに貼り付けてから「ロード」ボタンを押してください。
   </p>
+<button id="openBtn">貢献者の一覧/ソースコード</button>
 </div>
-<button id="openBtn">ポップアップを表示</button>
-
 <div id="modalOverlay" class="overlay">
   <div class="modal-content">
     <h2>List of contributors</h2>
@@ -68,24 +67,24 @@ window.addEventListener('click', (e) => {
 <details>
   <summary>Ver.4.6.6リリースノート</summary><p>
     <div style="margin-top: 1em; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
-重要！　更新以前からプレイしていた人は一度手動でセーブ、ロードしてください！</br>
-[見た目]計画キューの可視化、撤回を可能にする</br>
-[見た目]陸地面積の可視化(目安)</br>
-[機能]「オプションを先頭に戻さない」チェックボックスの追加</br>
-[機能]計画キューに最大20件保存可能になる(実行数は変わらず)</br>
-[機能]「遅延行動」計画の実装</br>
-[修正]農場/工場建設と設備強化を同時に行うときに失敗しなくなる</br>
-[修正]整地と防衛施設建設を同時に行うときに失敗しなくなる</br>
-[追加]海を掘削すると低確率で油田が発掘され、収入が増える</br>
-[追加]掘削時、発掘の確率を指定して油田発掘率を上げられる</br>
-[追加]油田にも設備強化が可能になる(枯渇率は上がる)</br>
-[追加]災害「隆起」：山の発生</br>
-[追加]災害「噴火」：上級な島は一定期間　食料産出停止, 人口増加停止</br>
-[追加]災害「経済危機」：上級な島は一定期間　一部資金凍結, 資金算出激減, 維持費激増</br>
-[追加]災害「地震/津波」：上級な島で稀に発生し、広範囲が破壊される</br>
+重要！　更新以前からプレイしていた人は一度手動でセーブ、ロードしてください！<br>
+[見た目]計画キューの可視化、撤回を可能にする<br>
+[見た目]陸地面積の可視化(目安)<br>
+[機能]「オプションを先頭に戻さない」チェックボックスの追加<br>
+[機能]計画キューに最大20件保存可能になる(実行数は変わらず)<br>
+[機能]「遅延行動」計画の実装<br>
+[修正]農場/工場建設と設備強化を同時に行うときに失敗しなくなる<br>
+[修正]整地と防衛施設建設を同時に行うときに失敗しなくなる<br>
+[追加]海を掘削すると低確率で油田が発掘され、収入が増える<br>
+[追加]掘削時、発掘の確率を指定して油田発掘率を上げられる<br>
+[追加]油田にも設備強化が可能になる(枯渇率は上がる)<br>
+[追加]災害「隆起」：山の発生<br>
+[追加]災害「噴火」：上級な島は一定期間　食料産出停止, 人口増加停止<br>
+[追加]災害「経済危機」：上級な島は一定期間　一部資金凍結, 資金算出激減, 維持費激増<br>
+[追加]災害「地震/津波」：上級な島で稀に発生し、広範囲が破壊される<br>
     </div>
 </p></details>
-<p>陸地面積: <span id="landArea">0</span>Km² | 砲撃可能数上限: <span id="gunCount">0</span>回 | 実績Pt: <span id="achievementPoints">0</span>Pt</br>資金: <span id="money">1000</span>G | 食料: <span id="food">500</span> | 人口: <span id="population">0</span>人 | ターン: <span id="turn">0</span> | 島の名前: <span id="currentIslandName"></span></p>
+<p>陸地面積: <span id="landArea">0</span>Km² | 砲撃可能数上限: <span id="gunCount">0</span>回 | 実績Pt: <span id="achievementPoints">0</span>Pt<br>資金: <span id="money">1000</span>G | 食料: <span id="food">500</span> | 人口: <span id="population">0</span>人 | ターン: <span id="turn">0</span> | 島の名前: <span id="currentIslandName"></span></p>
 <div>
     <label for="otherIslandActionInput">他島の行動:</label>
     <input type="text" id="otherIslandActionInput" style="width: 400px; margin-bottom: 5px;" placeholder="ここに他島からの行動を入力してください">
